@@ -339,10 +339,16 @@ function addQaRow(turn, llmMs, ttsMs, chars){
 }
 
 function extractName(text){
-  // A second "surname" word is only captured if it isn't a connector word
-  // like "from"/"calling" — otherwise "this is Sam from Acme" reads the
-  // name as "Sam from" instead of just "Sam".
-  const m = text.match(/(?:my name is|this is|i'?m|name'?s)\s+([A-Za-z][A-Za-z'\-]*)(?:\s+(?!(?:from|calling|with|at|and|here|speaking|of)\b)([A-Za-z][A-Za-z'\-]*))?/i);
+  // A second "surname" word is only captured if it isn't a connector/filler
+  // word — otherwise "my name is Harish I'm calling from…" reads the name as
+  // "Harish I'm" instead of just "Harish". The exclusion list covers
+  // connectors (from/with/at) AND first-person continuations (i/i'm/we/to…)
+  // that signal the name already ended.
+  const STOP = "from|calling|with|at|and|here|speaking|of|i|i'?m|we|to|for|my|our|want|wants|need|needs|would|looking|so|but|the";
+  const m = text.match(new RegExp(
+    "(?:my name is|this is|i'?m|name'?s)\\s+([A-Za-z][A-Za-z'\\-]*)(?:\\s+(?!(?:" + STOP + ")\\b)([A-Za-z][A-Za-z'\\-]*))?",
+    "i"
+  ));
   if(!m) return null;
   return (m[1] + (m[2] ? ' ' + m[2] : '')).trim();
 }
@@ -354,8 +360,20 @@ function extractCompany(text){
   // \b before the connector words stops "at" from matching mid-word (e.g.
   // inside "what"), which previously caused false-positive company
   // captures on ordinary questions like "what industries do you work with".
-  const m = text.match(/\b(?:calling from|from|with|at)\b\s+([A-Za-z0-9&'.]+(?:\s+[A-Za-z0-9&'.]+){0,4})/i);
-  return m ? m[1].replace(/[.,]+$/, '').trim() : null;
+  const m = text.match(/\b(?:calling from|from|with|at)\b\s+([A-Za-z0-9&'.\s]+)/i);
+  if(!m) return null;
+  // Walk words after the connector and stop at the first filler/pronoun word
+  // that means the company name has ended — so "from discover media I want my
+  // company…" yields "discover media", not "discover media I want my".
+  const STOP = /^(i|i'?m|we|and|to|for|about|want|wants|need|needs|would|looking|so|but|the|our|my|because|since|that|please|thanks?)$/i;
+  const words = [];
+  for(const raw of m[1].trim().split(/\s+/)){
+    const w = raw.replace(/[.,!?]+$/, '');
+    if(!w || STOP.test(w)) break;
+    words.push(w);
+    if(words.length >= 4) break;
+  }
+  return words.length ? words.join(' ') : null;
 }
 function extractPhone(text){
   const m = text.match(/(\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/);
