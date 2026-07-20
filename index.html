@@ -224,6 +224,10 @@ const templates = {
   returns: {
     label: "Retail returns & exchanges",
     prompt: "You are a customer service voice agent for an online retailer handling returns and exchanges. Ask for the order number and reason for return. Standard policy: returns accepted within 30 days, unworn, with tags. Offer store credit or refund to original payment. Be empathetic if the customer sounds frustrated, but stay within policy."
+  },
+  pwmedia: {
+    label: "PW Media (marketing agency intake)",
+    prompt: "You are the inbound intake agent for PW Media, an AI-driven full-funnel marketing agency in Columbia, MD (web design, paid media, content strategy, and AI automation tools like Click2Dash/InsightsAI). Warmly qualify callers: get their name, business, and what they want to improve (website, ads, SEO, automation). Don't quote exact pricing — every engagement is custom, so steer cost questions toward booking a discovery call. Collect a callback number so the team can follow up. Keep replies short and conversational, like a real front-desk call."
   }
 };
 
@@ -365,6 +369,16 @@ function extractName(text){
   return m ? m[1].trim() : null;
 }
 
+function looksLikeQuestion(text){
+  const t = text.trim();
+  return /\?\s*$/.test(t) || /^(what|how|does|do|did|is|are|can|could|when|where|why|will|should)\b/i.test(t);
+}
+
+function extractCompany(text){
+  const m = text.match(/(?:calling from|from|with|at)\s+([A-Za-z0-9&'.]+(?:\s+[A-Za-z0-9&'.]+){0,4})/i);
+  return m ? m[1].replace(/[.,]+$/, '').trim() : null;
+}
+
 function extractDOB(text){
   let m = text.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
   if(m) return m[0];
@@ -477,6 +491,26 @@ const engineConfig = {
       { test: /shipping label|return label/i, reply: () => "I can email you a prepaid return label — just confirm the email on file." }
     ],
     closing: state => `Thanks — since it's within policy, you're eligible for a refund or store credit. I've got that processed, and a confirmation email will follow. Anything else I can help with?`
+  },
+  pwmedia: {
+    greeting: "Thanks for calling PW Media — I can help get you set up with a discovery call. Could I get your name, and what business you're calling from?",
+    slots: [
+      { key: 'name', ask: "Could I get your name?", extract: extractName, label: v => v },
+      { key: 'company', ask: "And what business or company are you calling from?", extract: extractCompany, freeText: true, label: v => v },
+      { key: 'goal', ask: "What are you hoping to improve — your website, ads, SEO, or something else?", extract: () => null, freeText: true, label: v => truncate(v, 30) },
+      { key: 'phone', ask: "Could I get a callback number so our team can set up your discovery call?", extract: extractPhone, label: v => v }
+    ],
+    faqs: [
+      { test: /\bservices?\b|what do you (?:do|offer)|what.*you (?:provide|handle)/i, reply: () => "We're a full-service digital marketing agency — web design, paid media, content strategy, and AI-driven automation tools like Click2Dash." },
+      { test: /\bai\b|click2dash|insightsai|automat(?:e|ion)/i, reply: () => "Our Click2Dash platform, powered by InsightsAI, turns real-time data into smarter marketing decisions — think customer engagement analytics and workflow automation, tailored to your brand." },
+      { test: /small business|startup|large compan|national brand/i, reply: () => "We work with businesses of every size, from local startups to national brands — we scale the strategy to fit your goals." },
+      { test: /\bprice\b|\bpricing\b|\bcost\b|how much|\bbudget\b/i, reply: () => "Every plan is fully custom, so pricing depends on your goals — the best next step is a quick discovery call so we can put together a tailored quote." },
+      { test: /website|web design|redesign/i, reply: () => "Absolutely — whether it's a refresh or a full rebuild, we design responsive, SEO-optimized websites built to convert visitors into customers." },
+      { test: /industr(?:y|ies)/i, reply: () => "We've worked across retail, SaaS, automotive, and more — we build around your goals and your market, whatever industry you're in." },
+      { test: /\bwhere\b|\baddress\b|\blocated\b|\blocation\b/i, reply: () => "We're at 10490 Little Patuxent Parkway in Columbia, MD — or you can reach us anytime at (866) 291-9850." },
+      { test: /first step|get started|how do (?:we|i) start/i, reply: () => "We start with a quick discovery call to learn about your business and goals, then build a custom plan from there — that's exactly what I'm setting up for you now." }
+    ],
+    closing: state => `Great${state.name ? ', ' + state.name : ''} — I've got everything I need. Someone from our team will follow up to schedule your discovery call. Anything else I can help with?`
   }
 };
 
@@ -490,8 +524,14 @@ function getScriptedReply(templateKey, rawText){
   const cfg = engineConfig[templateKey] || engineConfig.restaurant;
   const state = conversationState[templateKey];
 
-  // 1. FAQ-style answers can fire at any point in the call.
+  // 1. FAQ-style answers can fire at any point in the call. Terminal ones
+  //    (e.g. "hang up and call 911") override everything else, even a
+  //    caller's very first turn before the greeting logic below would run.
   const faq = cfg.faqs.find(f => f.test.test(rawText));
+  if(faq && faq.terminal){
+    state.started = true;
+    return faq.reply(state);
+  }
 
   // 2. Try to extract every slot from this message — callers rarely answer
   //    in the order we asked, and may correct something they said earlier,
@@ -507,9 +547,12 @@ function getScriptedReply(templateKey, rawText){
 
   const nextSlot = cfg.slots.find(s => state[s.key] == null);
 
-  // Free-text fallback: if nothing structured matched and the currently
-  // targeted slot accepts free text, just take the raw utterance as its value.
-  if(!faq && newlyFilled.length === 0 && nextSlot && nextSlot.freeText && rawText.trim().split(/\s+/).length >= 2){
+  // Free-text fallback: if no structured slot matched, take the raw utterance
+  // as the currently-targeted slot's value — even if it also triggered an FAQ
+  // (e.g. answering "what do you want to improve" with "our website" both
+  // fills the goal slot AND is a valid trigger for the website FAQ; we want
+  // both, not one at the expense of the other).
+  if(newlyFilled.length === 0 && nextSlot && nextSlot.freeText && rawText.trim().split(/\s+/).length >= 2 && !looksLikeQuestion(rawText)){
     state[nextSlot.key] = rawText.trim();
     newlyFilled.push(nextSlot);
   }
