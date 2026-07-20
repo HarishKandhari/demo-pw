@@ -69,9 +69,9 @@
   @keyframes pillPop{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
 
   .wrap{max-width:1180px;margin:-30px auto 60px;padding:0 24px;}
-  .grid{display:grid;grid-template-columns:1fr;gap:20px;max-width:720px;margin:0 auto;}
-  html.team-view .grid{grid-template-columns:340px 1fr;max-width:none;margin:0;}
-  @media (max-width:860px){ html.team-view .grid{grid-template-columns:1fr;} }
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:20px;max-width:1040px;margin:0 auto;align-items:stretch;}
+  html.team-view .grid{grid-template-columns:320px 1fr 340px;max-width:none;margin:0;}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr;max-width:640px;} html.team-view .grid{grid-template-columns:1fr;} }
 
   .team-only{display:none;}
   html.team-view .team-only{display:block;}
@@ -171,6 +171,89 @@
   .flag-btn.flagged{background:#fdeceb;border-color:#e0503a;color:#e0503a;}
   .empty{color:var(--muted);font-size:12.5px;padding:14px 6px;text-align:center;}
 
+  /* ---- Right-side engagement stage ---- */
+  .stage{display:flex;flex-direction:column;height:640px;gap:16px;overflow:hidden;}
+  .stage-cap{background:linear-gradient(135deg,rgba(74,125,196,0.12),rgba(201,226,74,0.10));border:1px solid rgba(255,255,255,0.6);border-radius:14px;padding:14px 16px;}
+  .cap-head{display:flex;align-items:center;gap:8px;font-family:'Poppins',sans-serif;font-weight:600;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--blue-dark);}
+  .cap-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .2s;}
+  .cap-dot.live{background:#e0503a;animation:micPulse 1.1s ease-in-out infinite;}
+  .cap-text{margin-top:8px;font-size:15px;line-height:1.5;color:var(--text);min-height:44px;font-weight:500;}
+  .cap-text.interim{color:var(--blue-dark);}
+  .cap-text .caret{display:inline-block;width:2px;height:16px;background:var(--blue);margin-left:2px;vertical-align:-2px;animation:caretBlink 1s steps(1) infinite;}
+  @keyframes caretBlink{50%{opacity:0;}}
+
+  .scene{flex:1;position:relative;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 40%,rgba(74,125,196,0.10),rgba(240,245,252,0.5));border:1px solid rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center;}
+  .sc{display:flex;flex-direction:column;align-items:center;gap:18px;animation:scIn .5s cubic-bezier(.2,.7,.3,1) both;padding:16px;text-align:center;}
+  @keyframes scIn{from{opacity:0;transform:scale(.92) translateY(8px);}to{opacity:1;transform:none;}}
+  .sc-cap{font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;color:var(--blue-dark);}
+
+  /* idle orb */
+  .orb{position:relative;width:96px;height:96px;display:flex;align-items:center;justify-content:center;}
+  .orb span{position:absolute;border-radius:50%;border:2px solid var(--blue);opacity:0;animation:ring 2.4s ease-out infinite;}
+  .orb span:nth-child(1){width:40px;height:40px;}
+  .orb span:nth-child(2){width:40px;height:40px;animation-delay:.8s;}
+  .orb span:nth-child(3){width:40px;height:40px;animation-delay:1.6s;}
+  .orb::after{content:"";width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--lime));box-shadow:0 6px 18px rgba(74,125,196,0.4);}
+  @keyframes ring{0%{transform:scale(1);opacity:.7;}100%{transform:scale(2.6);opacity:0;}}
+
+  /* browser / website */
+  .browser{width:180px;background:#fff;border-radius:10px;box-shadow:0 12px 28px rgba(30,60,100,0.18);overflow:hidden;}
+  .bbar{background:#eef3fa;padding:8px 10px;display:flex;gap:5px;}
+  .bbar i{width:8px;height:8px;border-radius:50%;background:#cdd8e8;}
+  .bbar i:nth-child(1){background:#f2a3a3;} .bbar i:nth-child(2){background:#f2d79a;} .bbar i:nth-child(3){background:#a7d8b0;}
+  .brow{height:10px;margin:12px 12px 0;border-radius:5px;background:#e3ebf6;}
+  .brow.w1{width:70%;background:linear-gradient(90deg,var(--blue),var(--blue-dark));} .brow.w2{width:90%;} .brow.w3{width:55%;}
+  .bload{height:4px;margin:14px 12px 14px;border-radius:3px;background:#e3ebf6;overflow:hidden;position:relative;}
+  .bload::after{content:"";position:absolute;left:0;top:0;height:100%;width:40%;background:var(--lime-dark);border-radius:3px;animation:load 1.8s ease-in-out infinite;}
+  @keyframes load{0%{left:-40%;}100%{left:110%;}}
+
+  /* seo chart */
+  .chart{position:relative;display:flex;align-items:flex-end;gap:8px;height:110px;padding:0 20px;}
+  .chart span{width:16px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--blue),var(--blue-dark));height:0;animation:grow 1.1s cubic-bezier(.2,.7,.3,1) forwards;}
+  .chart span:nth-child(1){animation-delay:.05s;} .chart span:nth-child(2){animation-delay:.15s;}
+  .chart span:nth-child(3){animation-delay:.25s;} .chart span:nth-child(4){animation-delay:.35s;}
+  .chart span:nth-child(5){animation-delay:.45s;background:linear-gradient(180deg,var(--lime),var(--lime-dark));}
+  @keyframes grow{to{height:var(--h);}}
+  .chart .arrow{position:absolute;right:-2px;top:-6px;font-size:26px;color:var(--lime-dark);animation:floatUp 1.6s ease-in-out infinite;}
+  @keyframes floatUp{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+
+  /* ads target */
+  .target{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;}
+  .target span{position:absolute;border-radius:50%;border:3px solid var(--blue);}
+  .target span:nth-child(1){width:100px;height:100px;opacity:.35;}
+  .target span:nth-child(2){width:66px;height:66px;opacity:.6;}
+  .target span:nth-child(3){width:32px;height:32px;border-color:var(--blue-dark);}
+  .target b{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--lime-dark);animation:hit 1.6s ease-in-out infinite;}
+  @keyframes hit{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(169,194,46,.5);}50%{transform:scale(1.25);box-shadow:0 0 0 10px rgba(169,194,46,0);}}
+
+  /* ai network */
+  .net{position:relative;width:150px;height:110px;}
+  .net i{position:absolute;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dark));box-shadow:0 0 0 0 rgba(74,125,196,.5);animation:pop 2s ease-in-out infinite;}
+  .net .n1{left:8px;top:12px;} .net .n2{right:10px;top:6px;animation-delay:.3s;background:linear-gradient(135deg,var(--lime),var(--lime-dark));}
+  .net .n3{left:50%;top:46px;margin-left:-8px;animation-delay:.6s;} .net .n4{left:14px;bottom:8px;animation-delay:.9s;}
+  .net .n5{right:20px;bottom:12px;animation-delay:1.2s;background:linear-gradient(135deg,var(--lime),var(--lime-dark));}
+  @keyframes pop{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(74,125,196,.45);}50%{transform:scale(1.2);box-shadow:0 0 0 8px rgba(74,125,196,0);}}
+
+  /* pricing quote */
+  .quote{width:170px;background:#fff;border-radius:12px;box-shadow:0 12px 28px rgba(30,60,100,0.18);padding:16px;text-align:left;}
+  .quote .qh{font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;color:var(--blue-dark);}
+  .quote .qline{height:9px;border-radius:5px;background:#e3ebf6;margin-top:12px;width:100%;}
+  .quote .qline.s{width:65%;}
+  .quote .qbadge{margin-top:14px;display:inline-block;background:linear-gradient(135deg,var(--lime),var(--lime-dark));color:#20260a;font-family:'Poppins',sans-serif;font-weight:700;font-size:11px;padding:5px 12px;border-radius:14px;}
+
+  /* done check */
+  .checkbig{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--lime),var(--lime-dark));color:#20260a;font-size:40px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(169,194,46,0.4);animation:pop 1.8s ease-in-out infinite;}
+
+  /* progress tracker */
+  .progress{display:flex;flex-direction:column;gap:8px;}
+  .pstep{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);font-weight:500;transition:color .3s;}
+  .pstep .pcheck{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;transition:all .3s;flex:0 0 auto;}
+  .pstep.done{color:var(--text);}
+  .pstep.done .pcheck{background:#3aa16b;border-color:#3aa16b;}
+  .pstep.done .pcheck::after{content:"✓";}
+  .pstep.active{color:var(--blue-dark);font-weight:600;}
+  .pstep.active .pcheck{border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,125,196,0.15);}
+
   footer{max-width:1180px;margin:0 auto;padding:24px 32px 40px;color:var(--muted);font-size:12px;text-align:center;}
   footer a{color:var(--blue-dark);text-decoration:none;}
   footer .tech-note{display:none;margin-top:4px;}
@@ -249,6 +332,20 @@
         </button>
       </div>
     </div>
+
+    <div class="card stage">
+      <div class="stage-cap">
+        <div class="cap-head"><span class="cap-dot" id="capDot"></span><span id="capLabel">Ready when you are</span></div>
+        <div class="cap-text" id="capText">Tap the mic and start talking — your words appear here live.</div>
+      </div>
+      <div class="scene" id="scene"></div>
+      <div class="progress" id="progress">
+        <div class="pstep" data-k="name"><span class="pcheck"></span>Your name</div>
+        <div class="pstep" data-k="company"><span class="pcheck"></span>Your business</div>
+        <div class="pstep" data-k="goal"><span class="pcheck"></span>What you need</div>
+        <div class="pstep" data-k="phone"><span class="pcheck"></span>Callback number</div>
+      </div>
+    </div>
   </div>
 
   <div class="card qa team-only">
@@ -289,7 +386,65 @@ const voiceSel = $('voiceId'), customVoice = $('customVoiceId'), apiKeyInput = $
       chatLog = $('chatLog'), userInput = $('userInput'),
       sendBtn = $('sendBtn'), micBtn = $('micBtn'), resetBtn = $('resetBtn'),
       statusDot = $('statusDot'), statusText = $('statusText'),
-      waveform = $('waveform'), qaBody = $('qaBody'), qaEmpty = $('qaEmpty');
+      waveform = $('waveform'), qaBody = $('qaBody'), qaEmpty = $('qaEmpty'),
+      capDot = $('capDot'), capLabel = $('capLabel'), capText = $('capText'),
+      scene = $('scene'), progress = $('progress');
+
+// ---- Right-side engagement stage ----------------------------------------
+// Animated scenes that react to what the caller is talking about, so the
+// right panel feels alive and tied to the conversation rather than static.
+const SCENES = {
+  idle:    '<div class="sc sc-idle"><div class="orb"><span></span><span></span><span></span></div><div class="sc-cap">Listening for your call…</div></div>',
+  website: '<div class="sc"><div class="browser"><div class="bbar"><i></i><i></i><i></i></div><div class="brow w1"></div><div class="brow w2"></div><div class="brow w3"></div><div class="bload"></div></div><div class="sc-cap">Websites that convert</div></div>',
+  seo:     '<div class="sc"><div class="chart"><span style="--h:34%"></span><span style="--h:52%"></span><span style="--h:44%"></span><span style="--h:74%"></span><span style="--h:96%"></span><div class="arrow">&#8599;</div></div><div class="sc-cap">Climbing the rankings</div></div>',
+  ads:     '<div class="sc"><div class="target"><span></span><span></span><span></span><b></b></div><div class="sc-cap">Ads that hit the mark</div></div>',
+  ai:      '<div class="sc"><div class="net"><i class="n1"></i><i class="n2"></i><i class="n3"></i><i class="n4"></i><i class="n5"></i></div><div class="sc-cap">Click2Dash &middot; InsightsAI</div></div>',
+  pricing: '<div class="sc"><div class="quote"><div class="qh">Custom quote</div><div class="qline"></div><div class="qline s"></div><div class="qbadge">Tailored to you</div></div><div class="sc-cap">Built around your goals</div></div>',
+  done:    '<div class="sc"><div class="checkbig">&#10003;</div><div class="sc-cap">All set &mdash; we&#39;ll be in touch!</div></div>'
+};
+let currentScene = null;
+function setScene(key){
+  if(!key || key === currentScene) return;
+  currentScene = key;
+  scene.innerHTML = SCENES[key] || SCENES.idle;
+}
+setScene('idle');
+
+function detectTopic(text){
+  const t = (text || '').toLowerCase();
+  if(/website|web design|web site|redesign|landing page/.test(t)) return 'website';
+  if(/\bseo\b|search engine|ranking|rank higher|organic/.test(t)) return 'seo';
+  if(/\bads?\b|ppc|paid media|google ads|facebook ads|advertis/.test(t)) return 'ads';
+  if(/\bai\b|click2dash|insightsai|automat|analytic|data-driven|dashboard/.test(t)) return 'ai';
+  if(/\bprice\b|pricing|\bcost\b|budget|quote|how much/.test(t)) return 'pricing';
+  return null;
+}
+
+function updateProgress(){
+  progress.querySelectorAll('.pstep').forEach(step => {
+    const k = step.getAttribute('data-k');
+    step.classList.remove('active');
+    if(state[k] != null){
+      step.classList.add('done');
+    } else {
+      step.classList.remove('done');
+    }
+  });
+  // Mark the first unfilled step as active (the one Jordan is asking about).
+  const next = progress.querySelector('.pstep:not(.done)');
+  if(next && !state.done) next.classList.add('active');
+}
+
+// Update the right stage from a completed turn.
+function updateStage(userText, reply){
+  if(state.done){ setScene('done'); }
+  else {
+    const topic = detectTopic(userText + ' ' + reply);
+    if(topic) setScene(topic);
+    else if(currentScene === 'done') setScene('idle');
+  }
+  updateProgress();
+}
 
 if(TEAM_MODE){
   // Team profile: prefill the override fields with the defaults so staff
@@ -552,6 +707,10 @@ async function handleSend(){
   userInput.value = '';
   addMessage('user', text);
   conversation.push({role:'user', content:text});
+  // Echo the caller's last line in the captions panel.
+  capLabel.textContent = 'You said';
+  capText.className = 'cap-text';
+  capText.textContent = text;
 
   sendBtn.disabled = true;
   setStatus('Jordan is thinking…', 'warn');
@@ -562,6 +721,8 @@ async function handleSend(){
 
   conversation.push({role:'assistant', content:reply});
   const bubble = addMessage('agent', reply);
+  // React on the right: swap the topic scene + advance the progress tracker.
+  updateStage(text, reply);
 
   let ttsMs = null;
   const wantsVoice = TEAM_MODE ? (voiceToggle.value === 'on') : true;
@@ -629,6 +790,12 @@ function resetConversation(){
   qaBody.innerHTML = '';
   qaEmpty.style.display = 'block';
   setStatus('');
+  capDot.className = 'cap-dot';
+  capLabel.textContent = 'Ready when you are';
+  capText.className = 'cap-text';
+  capText.textContent = 'Tap the mic and start talking — your words appear here live.';
+  setScene('idle');
+  updateProgress();
 }
 resetBtn.addEventListener('click', resetConversation);
 sendBtn.addEventListener('click', handleSend);
@@ -641,17 +808,40 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 if(SpeechRecognition){
   recognition = new SpeechRecognition();
   recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.interimResults = true;   // stream partial words so captions feel live
   recognition.lang = 'en-US';
   recognition.onresult = (e) => {
-    userInput.value = e.results[0][0].transcript;
-    handleSend();
+    let interim = '', final = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const tr = e.results[i][0].transcript;
+      if(e.results[i].isFinal) final += tr; else interim += tr;
+    }
+    if(interim){
+      // Show the words as they're recognized — in the captions panel and,
+      // so it's visible right in the window, mirrored into the composer.
+      capLabel.textContent = 'You’re saying…';
+      capText.className = 'cap-text interim';
+      capText.innerHTML = interim.replace(/</g,'&lt;') + '<span class="caret"></span>';
+      userInput.value = interim;
+    }
+    if(final){
+      userInput.value = final;
+      handleSend();
+    }
   };
-  recognition.onend = () => { listening = false; micBtn.classList.remove('live'); };
+  recognition.onend = () => {
+    listening = false;
+    micBtn.classList.remove('live');
+    capDot.classList.remove('live');
+  };
   micBtn.addEventListener('click', () => {
     if(listening){ recognition.stop(); return; }
     listening = true;
     micBtn.classList.add('live');
+    capDot.classList.add('live');
+    capLabel.textContent = 'Listening…';
+    capText.className = 'cap-text interim';
+    capText.innerHTML = 'Go ahead, I&#39;m listening<span class="caret"></span>';
     setStatus('Listening…', 'ok');
     recognition.start();
   });
