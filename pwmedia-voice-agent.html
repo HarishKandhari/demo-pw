@@ -412,11 +412,11 @@ setScene('idle');
 
 function detectTopic(text){
   const t = (text || '').toLowerCase();
-  if(/website|web design|web site|redesign|landing page/.test(t)) return 'website';
-  if(/\bseo\b|search engine|ranking|rank higher|organic/.test(t)) return 'seo';
-  if(/\bads?\b|ppc|paid media|google ads|facebook ads|advertis/.test(t)) return 'ads';
-  if(/\bai\b|click2dash|insightsai|automat|analytic|data-driven|dashboard/.test(t)) return 'ai';
-  if(/\bprice\b|pricing|\bcost\b|budget|quote|how much/.test(t)) return 'pricing';
+  if(/website|web ?site|web design|redesign|landing page/.test(t)) return 'website';
+  if(/\bseo\b|search engine|ranking|rank (?:higher|up)|organic|hyperlocal|local (?:visibility|search|seo)|\baudit\b|google (?:business|maps)|ai overview/.test(t)) return 'seo';
+  if(/\bads?\b|ppc|paid media|google ads|facebook ads|advertis|\bctv\b|connected tv|streaming/.test(t)) return 'ads';
+  if(/\bai\b|click ?2 ?dash|insights ?ai|automat|agentic|analytic|data.driven|dashboard|\bapp\b/.test(t)) return 'ai';
+  if(/\bprice\b|pricing|\bcost\b|budget|quote|how much|\bfees?\b|\brates?\b/.test(t)) return 'pricing';
   return null;
 }
 
@@ -508,21 +508,28 @@ function extractName(text){
     "i"
   ));
   if(!m) return null;
-  return (m[1] + (m[2] ? ' ' + m[2] : '')).trim();
+  // "I'm not interested", "I'm just looking", "this is good" etc. trigger the
+  // pattern but aren't names — reject when the captured word is a common
+  // non-name word so we don't set someone's name to "not interested".
+  const NON_NAME = /^(not|just|so|really|still|here|good|fine|okay|ok|sorry|looking|calling|trying|wondering|hoping|interested|gonna|going|about|doing|great|glad|happy|sure|done|ready|new|curious|confused|kidding|serious|being|only|actually)$/i;
+  if(NON_NAME.test(m[1])) return null;
+  const second = (m[2] && !NON_NAME.test(m[2])) ? ' ' + m[2] : '';
+  return (m[1] + second).trim();
 }
 function looksLikeQuestion(text){
   const t = text.trim();
   return /\?\s*$/.test(t) || /^(what|how|does|do|did|is|are|can|could|when|where|why|will|should)\b/i.test(t);
 }
 function extractCompany(text){
-  // \b before the connector words stops "at" from matching mid-word (e.g.
-  // inside "what"), which previously caused false-positive company
-  // captures on ordinary questions like "what industries do you work with".
-  const m = text.match(/\b(?:calling from|from|with|at)\b\s+([A-Za-z0-9&'.\s]+)/i);
+  // Only STRONG, unambiguous company signals here. A generic "from X" is far
+  // too noisy — "more patients from google", "spam me with texts", "help with
+  // SEO" would all get mis-read as a company. Plain one-word answers like
+  // "Bloom Dental" are handled by the free-text slot capture instead.
+  const m = text.match(/(?:my name is|this is|i'?m|name'?s)\s+[A-Za-z][\w'\-]*\s+(?:from|with|at)\s+([A-Za-z0-9&'.\s]+)/i)
+         || text.match(/(?:calling from|company (?:is |named |called )|business (?:is |named |called )|we'?re (?:called |with |at )|work(?:ing)? (?:at|for)|my (?:company|business|shop|store|firm|practice) is)\s*([A-Za-z0-9&'.\s]+)/i);
   if(!m) return null;
   // Walk words after the connector and stop at the first filler/pronoun word
-  // that means the company name has ended — so "from discover media I want my
-  // company…" yields "discover media", not "discover media I want my".
+  // that signals the company name has ended.
   const STOP = /^(i|i'?m|we|and|to|for|about|want|wants|need|needs|would|looking|so|but|the|our|my|because|since|that|please|thanks?)$/i;
   const words = [];
   for(const raw of m[1].trim().split(/\s+/)){
@@ -554,26 +561,146 @@ const cfg = {
   greeting: "Hi, thanks for calling PW Media — this is Jordan. I can help get you set up with a discovery call. Could I get your name, and what business you're calling from?",
   slots: [
     { key: 'name', ask: "Could I get your name?", extract: extractName, label: v => v },
-    { key: 'company', ask: "And what business or company are you calling from?", extract: extractCompany, freeText: true, label: v => v },
+    { key: 'company', ask: "What business or company are you calling from?", extract: extractCompany, freeText: true, label: v => v },
     { key: 'goal', ask: "What are you hoping to improve — your website, ads, SEO, or something else?", extract: () => null, freeText: true, label: v => truncate(v, 30) },
     { key: 'phone', ask: "Could I get a callback number so our team can set up your discovery call?", extract: extractPhone, label: v => v }
   ],
+  // Knowledge base — ordered most-specific first, since the first match wins.
+  // Everything here is grounded in the real pwmedia.com so Jordan can hold up
+  // to tough, off-script questions without inventing facts.
   faqs: [
-    { test: /why (?:should i |would i )?(?:choose|pick|work with|go with|use|hire)|what makes you (?:different|special|stand out)|why you\b/i, reply: () => "Great question — we pair creative marketing with our own AI platform, Click2Dash, so every decision is backed by real data. You get an agency that's part strategist, part technology partner, all focused on measurable growth." },
-    { test: /\bservices?\b|what (?:do|does|can) (?:you|pw ?media)|what.{0,14}(?:it|you) (?:do|does|offer|provide|handle)|tell me (?:more )?about|who are you|what (?:is|are) pw ?media/i, reply: () => "We're a full-service digital marketing agency — web design, paid media, content strategy, and AI-driven automation tools like Click2Dash. Whatever your goal, we build the strategy around it." },
-    { test: /\bai\b|click2dash|insightsai|automat(?:e|ion)/i, reply: () => "Our Click2Dash platform, powered by InsightsAI, turns real-time data into smarter marketing decisions — think customer engagement analytics and workflow automation, tailored to your brand." },
-    { test: /small business|startup|large compan|national brand/i, reply: () => "We work with businesses of every size, from local startups to national brands — we scale the strategy to fit your goals." },
-    { test: /\bprice\b|\bpricing\b|\bcost\b|how much|\bbudget\b/i, reply: () => "Every plan is fully custom, so pricing depends on your goals — the best next step is a quick discovery call so we can put together a tailored quote." },
-    { test: /website|web design|redesign/i, reply: () => "Absolutely — whether it's a refresh or a full rebuild, we design responsive, SEO-optimized websites built to convert visitors into customers." },
-    { test: /industr(?:y|ies)/i, reply: () => "We've worked across retail, SaaS, automotive, and more — we build around your goals and your market, whatever industry you're in." },
-    { test: /\bwhere\b|\baddress\b|\blocated\b|\blocation\b/i, reply: () => "We're at 10490 Little Patuxent Parkway in Columbia, MD — or you can reach us anytime at (866) 291-9850." },
-    { test: /first step|get started|how do (?:we|i) start/i, reply: () => "We start with a quick discovery call to learn about your business and goals, then build a custom plan from there — that's exactly what I'm setting up for you now." },
-    { test: /how are you|how'?s it going|hope you'?re (?:well|good)/i, smalltalk: true, reply: () => "Doing great, thanks for asking!" },
-    { test: /\bthank(s| you)\b/i, smalltalk: true, reply: () => "Of course, happy to help." },
-    { test: /\bsorry\b|no worries/i, smalltalk: true, reply: () => "No worries at all." }
+    // "Gotcha" / identity questions the team loves to throw
+    { test: /are you (?:a |an )?(?:real |actual )?(?:robot|bot|human|person|ai|a\.i\.|machine|computer|chatbot)|am i (?:talking|speaking|chatting) (?:to|with) (?:a )?(?:real |actual )?(?:human|person|robot|bot|machine|someone)|is this (?:a )?(?:real |live )?(?:person|human|bot|robot|recording|machine)|are you real|you'?re (?:a )?(?:bot|robot|ai)/i,
+      reply: () => "Ha, fair question — I'm PW Media's AI assistant, so you're talking to a very well-informed robot. I can answer just about anything about us, and a real person from our team follows up with you personally too." },
+
+    // Objections / brush-offs — lean into the no-pressure ethos
+    { test: /not interested|no thanks|just (?:looking|browsing|curious|checking)|not (?:ready|sure|now)|maybe later|too expensive|can'?t afford|already (?:have|got|working with) (?:an? )?(?:agency|marketer|team|company)|we'?re (?:good|all set|fine)|stop calling|leave me alone/i,
+      reply: () => "Totally understand, and no pressure at all — even if you're just exploring, we're happy to give you a second opinion or a quick visibility check with no strings attached." },
+
+    // Guarantees / results / ROI / skepticism
+    { test: /guarantee|promise|\broi\b|return on invest|prove it|do you (?:actually|really) (?:work|deliver)|real results|track record|scam|legit(?:imate)?|too good to be true/i,
+      reply: () => "No one honest can promise an exact number, but we're all about measurable results — right now we manage over twenty-five thousand customer conversions a month and average a 3X lift in local search visibility." },
+
+    // Reviews / ratings / reputation / Google Partner
+    { test: /reviews?|ratings?|testimonial|reputation|trust(?:worthy|ed)?|how many stars|google partner|certified|awards?/i,
+      reply: () => "We're rated 4.8 out of 5 by over a thousand users, and we're a certified Google Partner — so you're in good hands." },
+
+    // Clients / case studies / who do you work with
+    { test: /who (?:are your|do you (?:work|partner)|are you working)|your clients|other (?:clients|companies|businesses)|case stud|examples|portfolio|any (?:names|brands)/i,
+      reply: () => "We work with a real mix — from local favorites like Sushi King to businesses like New Holland Transmission and Regency Memory Care Club, startups all the way up to national brands." },
+
+    // Experience / years in business / how old
+    { test: /how long have you|years? (?:in business|of experience|been (?:around|doing|operating))|how old|established|founded|since when|how much experience/i,
+      reply: () => "We bring over twenty-five years of marketing experience to the table, paired with our own AI technology — so it's seasoned strategy meets cutting-edge tools." },
+
+    // Contract / commitment / cancel
+    { test: /contract|commit(?:ment)?|lock(?:ed)? in|long.term|month.to.month|cancel|obligation|tied? (?:down|in)|how long am i signing/i,
+      reply: () => "We keep it flexible — you can do a full-service retainer or a one-time project, whatever fits. No pressure to lock into anything you're not comfortable with." },
+
+    // Timeline / how long until results
+    { test: /how long (?:does|will|before|until|to)|timeline|turnaround|how (?:soon|fast|quick(?:ly)?)|when (?:will|do) i see|ramp up|how quickly/i,
+      reply: () => "It really depends on the project — a website is different from an ongoing ad campaign — so we'll map out a realistic timeline together on the discovery call." },
+
+    // Pricing (plain, not an objection)
+    { test: /\bprice\b|pricing|\bcost(?:s|ing)?\b|how much|\bfees?\b|\brates?\b|\bbudget\b|expensive|cheap|per month|monthly (?:cost|fee)|quote/i,
+      reply: () => "Everything we do is fully custom, so pricing really depends on your goals — that's exactly what the discovery call is for, so we can put together something that fits you." },
+
+    // Click2Dash / InsightsAI / the app
+    { test: /click ?2 ?dash|insights ?ai|\bapp\b|download|dashboard|command center|apple|google play|app store|mobile app/i,
+      reply: () => "Click2Dash is our intelligence app, powered by InsightsAI — real-time campaign and customer insights right in your pocket. It's live in the Apple App Store now, with Google Play coming soon." },
+
+    // AI / automation
+    { test: /\bai\b|a\.i\.|artificial intelligence|automat(?:e|ion|ed|ing)|agentic|machine learning|\bml\b/i,
+      reply: () => "AI is at the core of what we do — InsightsAI is trained on your brand's DNA, so it turns real-time data into smarter decisions and automates the busywork, all tailored to you." },
+
+    // CTV / streaming
+    { test: /\bctv\b|connected tv|streaming|tv ads?|roku|hulu|over.the.top|\bott\b/i,
+      reply: () => "Yes — we run Connected TV ads on streaming platforms, the kind of premium placement that used to be out of reach for small and midsize businesses." },
+
+    // Hyperlocal / local visibility / audit / AI Overviews
+    { test: /hyperlocal|local (?:visibility|search|seo|marketing|pack)|near me|google (?:business|maps)|\bmaps\b|visibility audit|\baudit\b|ai overview/i,
+      reply: () => "Local's a big one for us — we do hyperlocal targeting and visibility audits so you can see exactly where you stand against competitors, even in Google's AI Overviews." },
+
+    // SEO
+    { test: /\bseo\b|search engine|ranking|rank (?:higher|better|up)|organic|show up (?:on|in) google|get found/i,
+      reply: () => "Absolutely — we build responsive, SEO-optimized sites and local strategies designed to get you found and turn that visibility into real customers." },
+
+    // Website
+    { test: /website|web ?site|web design|redesign|landing page|build (?:me )?a site|new site/i,
+      reply: () => "Definitely — whether it's a refresh or a full rebuild, we design responsive, SEO-optimized websites built to turn visitors into customers." },
+
+    // Ads / paid media
+    { test: /\bads?\b|ppc|paid (?:media|search|ads)|google ads|facebook ads|meta ads|advertis|social (?:media )?ads?|ad campaign/i,
+      reply: () => "Paid media's right in our wheelhouse — hyper-targeted ads and CTV placements built to get you in front of the right people and actually convert them." },
+
+    // Content / social / branding
+    { test: /content|social media|\bposts?\b|blog|copywriting|branding|creative/i,
+      reply: () => "Yep — content strategy and social are part of our full-funnel approach, all tied back to real data so it actually moves the needle instead of just filling a calendar." },
+
+    // Why choose / different / competitors
+    { test: /why (?:should i |would i )?(?:choose|pick|work with|go with|use|hire)|what makes you (?:different|special|stand out|better)|why you\b|better than|competitors?|vs\b|compared to/i,
+      reply: () => "Honestly, it's the combination — twenty-five-plus years of marketing know-how plus our own AI platform. Most agencies have one or the other; we bridge creativity, strategy, and automation to get measurable results." },
+
+    // Manage everything vs one piece
+    { test: /manage everything|one (?:piece|part|thing)|just (?:one|a single|handle one)|handle (?:all|everything)|full service|soup to nuts|retainer|à la carte|a la carte/i,
+      reply: () => "Both — whatever you need. We do everything from full-service retainers to a single one-time project. You pick what fits and we plug in there." },
+
+    // Services (broad) — catch adverbs like "what exactly does PW Media do"
+    { test: /\bservices?\b|what (?:exactly |actually )?(?:do|does|can) (?:you|pw ?media|they|it)\b|what.{0,20}(?:you|pw ?media|they) (?:do|does|offer|provide|handle)|what.{0,14}pw ?media\b|everything you (?:do|offer)|full.funnel|what can you (?:do|help)/i,
+      reply: () => "We're a full-funnel marketing and AI lab — web design, paid media and CTV, content, SEO, local visibility, plus automation tools like Click2Dash. Basically your whole marketing under one roof." },
+
+    // About / who is PW Media
+    { test: /tell me (?:more )?about|who (?:are|is) (?:you|pw ?media|the company)|what (?:is|are) pw ?media|your (?:company|story|background|mission)/i,
+      reply: () => "We're PW Media — a next-generation full-funnel marketing and AI lab. We connect brand, tech, and data to help businesses grow, from the very first search all the way to conversion." },
+
+    // Industries
+    { test: /industr(?:y|ies)|niche|vertical|do you (?:work|specialize) (?:with|in) .*(?:business|compan|industr)|my (?:industry|field|space)/i,
+      reply: () => "We've worked across retail, SaaS, and automotive, among others — but what we really specialize in is understanding business, so we build around your goals and your market." },
+
+    // Small vs large
+    { test: /small business|startup|small compan|mom and pop|local business|large compan|enterprise|national brand|big (?:brand|compan|business)/i,
+      reply: () => "Both, genuinely — from local startups to national brands. We scale the strategy to fit your size and your goals." },
+
+    // Remote / do you work outside Maryland
+    { test: /outside (?:of )?maryland|other states?|nationwide|remote(?:ly)?|virtual|anywhere|only (?:in |work in )?maryland|do you travel|out of state|work with me/i,
+      reply: () => "Not just Maryland at all — we work with businesses locally and scale nationally, so where you are isn't a barrier." },
+
+    // Location / where based
+    { test: /\bwhere\b|\baddress\b|\blocated\b|\blocation\b|based|office|headquart|what state|which state/i,
+      reply: () => "We're based at 10490 Little Patuxent Parkway in Columbia, Maryland — but we work with clients both locally and nationally." },
+
+    // Hours / availability
+    { test: /hours?|(?:are you |you )?open|when are you (?:open|available)|weekend|after hours|available now/i,
+      reply: () => "You can reach us anytime at (866) 291-9850, and I'm here around the clock. If the team's away, leave your details and we'll get right back to you." },
+
+    // Contact / phone / email
+    { test: /phone number|contact|reach (?:you|someone)|call (?:you|back)|\bemail\b|get in touch|talk to (?:someone|a (?:person|human|rep)|sales)/i,
+      reply: () => "The quickest way is (866) 291-9850, or I can take your details right now and have someone reach out — whichever's easier for you." },
+
+    // Text / SMS / privacy
+    { test: /text messages?|\bsms\b|\bspam\b|opt.?out|stop texting|will you text|share my (?:number|info|data|phone)|sell my (?:info|data)/i,
+      reply: () => "Only if you opt in, and we never share your number with anyone — you can reply STOP anytime to opt out. No spam, promise." },
+
+    // First step / get started
+    { test: /first step|get started|how do (?:we|i) (?:start|begin)|next steps?|sign me up|move forward|let'?s do it/i,
+      reply: () => "Easy — it starts with a quick discovery call so we can learn about your business and build a plan. That's exactly what I'm setting up for you right now." },
+
+    // Small talk
+    { test: /how are you|how'?s it going|how are things|hope you'?re (?:well|good|doing)|what'?s up/i, smalltalk: true, reply: () => "Doing great, thanks for asking!" },
+    { test: /\bthank(s| you)\b|appreciate (?:it|that|you)|you'?re (?:the best|great|awesome)/i, smalltalk: true, reply: () => "Of course — happy to help!" },
+    { test: /\bsorry\b|no worries|my bad|apolog/i, smalltalk: true, reply: () => "No worries at all." },
+    { test: /^(?:bye|goodbye|good ?bye|gotta go|talk (?:later|soon)|have a (?:good|great)|see (?:ya|you))\b/i, smalltalk: true, terminal: true, reply: () => "Thanks so much for reaching out — take care, and we'll talk soon!" }
   ],
-  closing: state => `Great${state.name ? ', ' + state.name : ''} — I've got everything I need. Someone from our team will follow up to schedule your discovery call. Anything else I can help with?`
+  closing: state => `Perfect${state.name ? ', ' + state.name : ''} — I've got everything I need. Someone from our team will follow up personally to set up your discovery call. Anything else I can help you with in the meantime?`
 };
+
+// Soft connective phrases so re-asking for a slot after an answer doesn't feel
+// like a robot repeating the same line every turn.
+const BRIDGES = ["So, ", "Anyway, ", "In the meantime, ", "And ", ""];
+function bridgeAsk(ask){
+  const b = BRIDGES[Math.floor(Math.random() * BRIDGES.length)];
+  return b ? b + lc1(ask) : ask;
+}
 
 function freshState(){ return { started: false, done: false }; }
 let state = freshState();
@@ -595,7 +722,13 @@ function getScriptedReply(rawText){
   // A pure smalltalk aside ("thanks so much", "sorry about that") should
   // never get filed as the real answer to an open slot.
   if(newlyFilled.length === 0 && nextSlot && nextSlot.freeText && rawText.trim().split(/\s+/).length >= 2 && !looksLikeQuestion(rawText) && !(faq && faq.smalltalk)){
-    state[nextSlot.key] = rawText.trim();
+    let val = rawText.trim();
+    // If a whole line is taken as the company, trim a leading connector so we
+    // store "Bloom Dental", not "from Bloom Dental" / "we're Bloom Dental".
+    if(nextSlot.key === 'company'){
+      val = val.replace(/^(?:from|with|at|it'?s|its|we'?re|i'?m from|the (?:company|business) is|company is|business is|called)\s+/i, '').trim();
+    }
+    state[nextSlot.key] = val;
     newlyFilled.push(nextSlot);
   }
 
@@ -610,13 +743,18 @@ function getScriptedReply(rawText){
       state.done = true;
       return cfg.closing(state);
     }
+    // If the caller opens with a real question, answer it first, then warmly
+    // introduce and start the intake — instead of ignoring it for the greeting.
+    if(faq && !faq.smalltalk){
+      return `${faq.reply(state)} By the way, I'm Jordan with PW Media — could I get your name, and what business you're calling from?`;
+    }
     return cfg.greeting;
   }
 
   if(faq){
     const ans = faq.reply(state);
     const ack = newlyFilled.length > 0 ? `${pickAck()} ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ` : '';
-    return missingAfter ? ack + ans + ' ' + missingAfter.ask : ack + ans;
+    return missingAfter ? ack + ans + ' ' + bridgeAsk(missingAfter.ask) : ack + ans;
   }
 
   if(missingAfter){
@@ -631,9 +769,9 @@ function getScriptedReply(rawText){
     // A clear question we don't have a canned answer for shouldn't get
     // "Sorry, I didn't catch that" — acknowledge it warmly and keep moving.
     if(looksLikeQuestion(rawText)){
-      return `That's a great question — I can walk you through it on your discovery call. First though, ${lc1(missingAfter.ask)}`;
+      return `That's a great question — I can get one of our specialists to walk you through it on your discovery call. First though, ${lc1(missingAfter.ask)}`;
     }
-    return `Sorry, I didn't quite catch that — ${missingAfter.ask}`;
+    return `Sorry, I want to make sure I get this right — ${lc1(missingAfter.ask)}`;
   }
 
   if(!state.done){
