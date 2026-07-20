@@ -518,7 +518,14 @@ function extractName(text){
 }
 function looksLikeQuestion(text){
   const t = text.trim();
-  return /\?\s*$/.test(t) || /^(what|how|does|do|did|is|are|can|could|when|where|why|will|should)\b/i.test(t);
+  // Voice transcripts have no "?", and callers pad questions with lead-ins
+  // ("so first tell me what is…"), so detect question shape three ways:
+  // trailing "?", a leading question word (after optional filler), or an
+  // embedded ask like "tell me what" / "how does" / "can you explain".
+  if(/\?\s*$/.test(t)) return true;
+  if(/^(?:so|ok(?:ay)?|well|and|but|hey|um|uh|yeah|actually|also|now|just|first|quick(?:ly)?|one)?\s*,?\s*(what|how|does|do|did|is|are|can|could|when|where|why|will|would|should|who|which|tell me|explain|walk me)\b/i.test(t)) return true;
+  if(/\b(tell me (?:about|what|how|more|why)|what(?:'s| is| are| do| does| can|ever)|how (?:do|does|can|much|long|come)|can you (?:tell|explain|help|do|walk)|do you (?:offer|have|do|work|guarantee|provide)|are you (?:a |an |the |able|really)|why (?:should|would|do|is))\b/i.test(t)) return true;
+  return false;
 }
 function extractCompany(text){
   // Only STRONG, unambiguous company signals here. A generic "from X" is far
