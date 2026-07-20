@@ -435,11 +435,13 @@ function updateProgress(){
   if(next && !state.done) next.classList.add('active');
 }
 
-// Update the right stage from a completed turn.
+// Update the right stage from a completed turn. Prefer the topic in what the
+// CALLER said — Jordan's reply always lists "website, ads, SEO" in the slot
+// question, so reading the reply first would nearly always show "website".
 function updateStage(userText, reply){
   if(state.done){ setScene('done'); }
   else {
-    const topic = detectTopic(userText + ' ' + reply);
+    const topic = detectTopic(userText) || detectTopic(reply);
     if(topic) setScene(topic);
     else if(currentScene === 'done') setScene('idle');
   }
