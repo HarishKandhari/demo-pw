@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PW Media | Voice Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#4A7DC4;
+    --blue-dark:#2E5C99;
+    --lime:#C9E24A;
+    --lime-dark:#a9c22e;
+    --ink:#0A0A0A;
+    --text:#22262b;
+    --muted:#6b7280;
+    --border:#dbe4f0;
+    --card:#ffffff;
+    --page:#f4f7fb;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--page);color:var(--text);font-family:'Inter',sans-serif;}
+  h1,h2,h3,.brandfont{font-family:'Poppins',sans-serif;}
+
+  header{background:var(--ink);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-family:'Poppins',sans-serif;font-weight:700;font-size:26px;color:#fff;letter-spacing:-0.01em;display:flex;align-items:center;}
+  .logo span{color:var(--blue);}
+  .logo .dot{color:var(--blue);font-size:20px;margin-left:2px;}
+  .hdr-badge{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:#cfe0f5;border:1px solid #2a3a52;background:#12233a;padding:7px 16px;border-radius:20px;letter-spacing:0.03em;}
+
+  .hero{background:linear-gradient(135deg,var(--blue),var(--blue-dark));padding:44px 32px 56px;text-align:center;color:#fff;}
+  .hero h1{font-size:32px;font-weight:700;margin:0 0 10px;letter-spacing:-0.01em;}
+  .hero p{font-size:15px;color:#e4edf9;max-width:640px;margin:0 auto;line-height:1.6;}
+  .hero .pill{display:inline-block;margin-top:18px;background:var(--lime);color:#20260a;font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;padding:10px 22px;border-radius:24px;}
+
+  .wrap{max-width:1180px;margin:-28px auto 60px;padding:0 24px;}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:20px;}
+  @media (max-width:860px){.grid{grid-template-columns:1fr;}}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:0 12px 30px rgba(30,60,100,0.08);}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:0.05em;color:var(--blue-dark);margin:0 0 16px;font-weight:600;}
+
+  label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;font-weight:500;}
+  label:first-of-type{margin-top:0;}
+  select,textarea,input[type=text],input[type=password]{
+    width:100%;background:#f7faff;border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;
+  }
+  textarea{min-height:110px;line-height:1.5;}
+  select:focus,textarea:focus,input:focus{outline:2px solid var(--blue);outline-offset:1px;}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4;}
+  .hint a{color:var(--blue-dark);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .chat-panel{display:flex;flex-direction:column;height:640px;}
+  .chat-log{flex:1;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:12px;}
+  .msg{max-width:78%;padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.5;}
+  .msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
+  .msg.agent{align-self:flex-start;background:#f0f5fc;border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px;}
+  .msg .meta{display:block;font-size:10px;color:var(--muted);margin-top:6px;font-family:'Inter',sans-serif;}
+  .msg.user .meta{color:#dce9fb;}
+
+  .composer{display:flex;gap:8px;margin-top:14px;align-items:flex-end;}
+  .composer textarea{min-height:46px;max-height:110px;flex:1;}
+  button{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;border:none;border-radius:24px;cursor:pointer;padding:12px 18px;}
+  .btn-primary{background:var(--lime);color:#20260a;}
+  .btn-primary:hover{background:var(--lime-dark);}
+  .btn-mic{background:#f0f5fc;border:1px solid var(--border);color:var(--text);width:46px;padding:0;font-size:16px;border-radius:10px;}
+  .btn-mic.live{background:#e0503a;color:#fff;border-color:#e0503a;}
+  button:disabled{opacity:0.45;cursor:not-allowed;}
+
+  .waveform{display:flex;align-items:center;gap:3px;height:20px;}
+  .waveform span{width:3px;background:var(--blue);border-radius:2px;height:4px;transition:height .12s ease;}
+  .waveform.active span{animation:bounce 0.9s ease-in-out infinite;}
+  .waveform span:nth-child(1){animation-delay:0s;}
+  .waveform span:nth-child(2){animation-delay:.1s;}
+  .waveform span:nth-child(3){animation-delay:.2s;}
+  .waveform span:nth-child(4){animation-delay:.3s;}
+  .waveform span:nth-child(5){animation-delay:.15s;}
+  @keyframes bounce{0%,100%{height:4px;}50%{height:18px;}}
+
+  .status-line{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:500;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+  .dot.ok{background:#3aa16b;}
+  .dot.warn{background:var(--lime-dark);}
+
+  .qa{margin-top:20px;}
+  .qa-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .qa-table th{text-align:left;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--border);}
+  .qa-table td{padding:8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top;}
+  .qa-table tr:last-child td{border-bottom:none;}
+  .flag-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;font-size:10px;border-radius:16px;}
+  .flag-btn.flagged{background:#fdeceb;border-color:#e0503a;color:#e0503a;}
+  .empty{color:var(--muted);font-size:12px;padding:12px 4px;}
+
+  footer{max-width:1180px;margin:0 auto;padding:24px 32px 40px;color:var(--muted);font-size:12px;text-align:center;}
+  footer a{color:var(--blue-dark);text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">pw<span>media</span><span class="dot">.</span></div>
+  <div class="hdr-badge">VOICE AGENT · POWERED BY INSIGHTSAI™</div>
+</header>
+
+<div class="hero">
+  <h1>Your AI front desk, live on every call</h1>
+  <p>A scripted, brand-tuned voice agent that qualifies inbound leads for PW Media — capturing name, company, and goals, answering common questions instantly, and lining up the discovery call. Built on the same full-funnel thinking behind Click2Dash™.</p>
+  <div class="pill">LIVE DEMO — TALK TO IT BELOW</div>
+</div>
+
+<div class="wrap">
+  <div class="grid">
+
+    <div class="card">
+      <h2>Agent configuration</h2>
+
+      <label for="voiceId">ElevenLabs voice</label>
+      <select id="voiceId">
+        <option value="custom">Use my own voice ID (see below)</option>
+      </select>
+      <input type="text" id="customVoiceId" placeholder="Paste your voice_id" style="margin-top:8px;">
+      <div class="hint">Free-tier ElevenLabs accounts can't use library voices via the API — go to Voices → Add a voice → Voice Design in your ElevenLabs dashboard, then paste that voice's ID here.</div>
+
+      <label for="apiKey">ElevenLabs API key</label>
+      <input type="password" id="apiKey" placeholder="sk_...">
+      <div class="hint">Stays in your browser only, sent directly to ElevenLabs. Get a free key at <a href="https://elevenlabs.io" target="_blank">elevenlabs.io</a>.</div>
+
+      <div class="row2" style="margin-top:16px;">
+        <div>
+          <label style="margin:0;">Voice replies</label>
+          <select id="voiceToggle"><option value="on">On</option><option value="off">Off (text only)</option></select>
+        </div>
+        <div>
+          <label style="margin:0;">Reply length</label>
+          <select id="lengthToggle"><option value="short">Short (calls)</option><option value="normal">Normal</option></select>
+        </div>
+      </div>
+
+      <label style="margin-top:16px;">What this agent does</label>
+      <div class="hint" style="background:#f0f5fc;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+        Greets the caller, collects name + company + what they want to improve (website, ads, SEO, automation), gets a callback number, and answers FAQs about services, Click2Dash/InsightsAI, pricing, industries, and location — pulled straight from pwmedia.com.
+      </div>
+    </div>
+
+    <div class="card chat-panel">
+      <div class="status-line">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Idle</span>
+        <span class="waveform" id="waveform"><span></span><span></span><span></span><span></span><span></span></span>
+      </div>
+
+      <div class="chat-log" id="chatLog">
+        <div class="empty">No messages yet — type below or hit the mic to start the call.</div>
+      </div>
+
+      <div class="composer">
+        <button class="btn-mic" id="micBtn" title="Speak">🎙</button>
+        <textarea id="userInput" placeholder="Type what the caller would say…"></textarea>
+        <button class="btn-primary" id="sendBtn">Send</button>
+        <button class="btn-mic" id="resetBtn" title="Reset conversation">↺</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card qa">
+    <h2>QA / test log — response review</h2>
+    <table class="qa-table" id="qaTable">
+      <thead><tr><th>#</th><th>Turn</th><th>Match time</th><th>TTS latency</th><th>Chars</th><th>Flag</th></tr></thead>
+      <tbody id="qaBody"></tbody>
+    </table>
+    <div class="empty" id="qaEmpty">Metrics for each turn will appear here as you test the agent.</div>
+  </div>
+</div>
+
+<footer>
+  PW Media · (866) 291-9850 · 10490 Little Patuxent Pkwy, Columbia, MD 21044<br>
+  Voice replies use ElevenLabs TTS; speech recognition uses the browser's Web Speech API (Chrome recommended).
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const voiceSel = $('voiceId'), customVoice = $('customVoiceId'), apiKeyInput = $('apiKey'),
+      voiceToggle = $('voiceToggle'), lengthToggle = $('lengthToggle'),
+      chatLog = $('chatLog'), userInput = $('userInput'),
+      sendBtn = $('sendBtn'), micBtn = $('micBtn'), resetBtn = $('resetBtn'),
+      statusDot = $('statusDot'), statusText = $('statusText'),
+      waveform = $('waveform'), qaBody = $('qaBody'), qaEmpty = $('qaEmpty');
+
+const PERSIST_FIELDS = ['apiKey', 'customVoiceId'];
+PERSIST_FIELDS.forEach(id => {
+  const el = $(id);
+  const saved = localStorage.getItem('pwva_' + id);
+  if(saved) el.value = saved;
+  el.addEventListener('input', () => localStorage.setItem('pwva_' + id, el.value));
+});
+
+function setStatus(text, mode){
+  statusText.textContent = text;
+  statusDot.className = 'dot' + (mode ? ' ' + mode : '');
+}
+
+let conversation = [];
+let turnCount = 0;
+
+function addMessage(role, text){
+  const empty = chatLog.querySelector('.empty');
+  if(empty) empty.remove();
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = text.replace(/</g,'&lt;');
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return div;
+}
+
+function addQaRow(turn, llmMs, ttsMs, chars){
+  qaEmpty.style.display = 'none';
+  turnCount++;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${turnCount}</td><td>${turn}</td><td>${llmMs}ms</td><td>${ttsMs!==null? ttsMs+'ms':'—'}</td><td>${chars}</td><td></td>`;
+  const flagCell = tr.querySelector('td:last-child');
+  const btn = document.createElement('button');
+  btn.className = 'flag-btn';
+  btn.textContent = 'Flag';
+  btn.onclick = () => btn.classList.toggle('flagged');
+  flagCell.appendChild(btn);
+  qaBody.appendChild(tr);
+}
+
+function extractName(text){
+  const m = text.match(/(?:my name is|this is|i'?m|name'?s)\s+([A-Za-z][A-Za-z'\-]*(?:\s+[A-Za-z][A-Za-z'\-]*)?)/i);
+  return m ? m[1].trim() : null;
+}
+function looksLikeQuestion(text){
+  const t = text.trim();
+  return /\?\s*$/.test(t) || /^(what|how|does|do|did|is|are|can|could|when|where|why|will|should)\b/i.test(t);
+}
+function extractCompany(text){
+  const m = text.match(/(?:calling from|from|with|at)\s+([A-Za-z0-9&'.]+(?:\s+[A-Za-z0-9&'.]+){0,4})/i);
+  return m ? m[1].replace(/[.,]+$/, '').trim() : null;
+}
+function extractPhone(text){
+  const m = text.match(/(\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/);
+  return m ? m[0] : null;
+}
+const truncate = (v, n) => v.length > n ? v.slice(0, n) + '…' : v;
+
+const cfg = {
+  greeting: "Thanks for calling PW Media — I can help get you set up with a discovery call. Could I get your name, and what business you're calling from?",
+  slots: [
+    { key: 'name', ask: "Could I get your name?", extract: extractName, label: v => v },
+    { key: 'company', ask: "And what business or company are you calling from?", extract: extractCompany, freeText: true, label: v => v },
+    { key: 'goal', ask: "What are you hoping to improve — your website, ads, SEO, or something else?", extract: () => null, freeText: true, label: v => truncate(v, 30) },
+    { key: 'phone', ask: "Could I get a callback number so our team can set up your discovery call?", extract: extractPhone, label: v => v }
+  ],
+  faqs: [
+    { test: /\bservices?\b|what do you (?:do|offer)|what.*you (?:provide|handle)/i, reply: () => "We're a full-service digital marketing agency — web design, paid media, content strategy, and AI-driven automation tools like Click2Dash." },
+    { test: /\bai\b|click2dash|insightsai|automat(?:e|ion)/i, reply: () => "Our Click2Dash platform, powered by InsightsAI, turns real-time data into smarter marketing decisions — think customer engagement analytics and workflow automation, tailored to your brand." },
+    { test: /small business|startup|large compan|national brand/i, reply: () => "We work with businesses of every size, from local startups to national brands — we scale the strategy to fit your goals." },
+    { test: /\bprice\b|\bpricing\b|\bcost\b|how much|\bbudget\b/i, reply: () => "Every plan is fully custom, so pricing depends on your goals — the best next step is a quick discovery call so we can put together a tailored quote." },
+    { test: /website|web design|redesign/i, reply: () => "Absolutely — whether it's a refresh or a full rebuild, we design responsive, SEO-optimized websites built to convert visitors into customers." },
+    { test: /industr(?:y|ies)/i, reply: () => "We've worked across retail, SaaS, automotive, and more — we build around your goals and your market, whatever industry you're in." },
+    { test: /\bwhere\b|\baddress\b|\blocated\b|\blocation\b/i, reply: () => "We're at 10490 Little Patuxent Parkway in Columbia, MD — or you can reach us anytime at (866) 291-9850." },
+    { test: /first step|get started|how do (?:we|i) start/i, reply: () => "We start with a quick discovery call to learn about your business and goals, then build a custom plan from there — that's exactly what I'm setting up for you now." }
+  ],
+  closing: state => `Great${state.name ? ', ' + state.name : ''} — I've got everything I need. Someone from our team will follow up to schedule your discovery call. Anything else I can help with?`
+};
+
+function freshState(){ return { started: false, done: false }; }
+let state = freshState();
+
+function getScriptedReply(rawText){
+  const faq = cfg.faqs.find(f => f.test.test(rawText));
+  if(faq && faq.terminal){ state.started = true; return faq.reply(state); }
+
+  const newlyFilled = [];
+  cfg.slots.forEach(slot => {
+    const val = slot.extract(rawText);
+    if(val != null && val !== state[slot.key]){
+      state[slot.key] = val;
+      newlyFilled.push(slot);
+    }
+  });
+
+  const nextSlot = cfg.slots.find(s => state[s.key] == null);
+  if(newlyFilled.length === 0 && nextSlot && nextSlot.freeText && rawText.trim().split(/\s+/).length >= 2 && !looksLikeQuestion(rawText)){
+    state[nextSlot.key] = rawText.trim();
+    newlyFilled.push(nextSlot);
+  }
+
+  const missingAfter = cfg.slots.find(s => state[s.key] == null);
+
+  if(!state.started){
+    state.started = true;
+    if(newlyFilled.length > 0 && missingAfter){
+      return `Thanks for calling! Got ${newlyFilled.map(s => s.label(state[s.key])).join(' and ')} — ${missingAfter.ask}`;
+    }
+    if(newlyFilled.length > 0 && !missingAfter){
+      state.done = true;
+      return cfg.closing(state);
+    }
+    return cfg.greeting;
+  }
+
+  if(faq){
+    const ans = faq.reply(state);
+    const ack = newlyFilled.length > 0 ? `Got it — ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ` : '';
+    return missingAfter ? ack + ans + ' ' + missingAfter.ask : ack + ans;
+  }
+
+  if(missingAfter){
+    if(newlyFilled.length > 0){
+      return `Got it — ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ${missingAfter.ask}`;
+    }
+    return `Sorry, I didn't quite catch that — ${missingAfter.ask}`;
+  }
+
+  if(!state.done){
+    state.done = true;
+    return cfg.closing(state);
+  }
+
+  if(newlyFilled.length > 0){
+    return `Got it — updated to ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ${cfg.closing(state)}`;
+  }
+  if(/\b(change|modify|update|edit)\b/i.test(rawText)){
+    return "Sure — what would you like to change it to?";
+  }
+  return "Anything else I can help with, or should I let you go?";
+}
+
+async function callElevenLabs(text, voiceId, apiKey){
+  const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
+    body: JSON.stringify({ text: text, model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.5, similarity_boost: 0.75 } })
+  });
+  if(!resp.ok){
+    const errText = await resp.text();
+    throw new Error("ElevenLabs error: " + resp.status + " " + errText.slice(0,150));
+  }
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
+}
+
+async function handleSend(){
+  const text = userInput.value.trim();
+  if(!text) return;
+  userInput.value = '';
+  addMessage('user', text);
+  conversation.push({role:'user', content:text});
+
+  sendBtn.disabled = true;
+  setStatus('Thinking…', 'warn');
+
+  const t0 = performance.now();
+  const reply = getScriptedReply(text);
+  const llmMs = Math.round(performance.now() - t0);
+
+  conversation.push({role:'assistant', content:reply});
+  const bubble = addMessage('agent', reply);
+
+  let ttsMs = null;
+  const wantsVoice = voiceToggle.value === 'on';
+  const key = apiKeyInput.value.trim();
+  const voiceId = voiceSel.value === 'custom' ? customVoice.value.trim() : voiceSel.value;
+
+  if(wantsVoice && key && voiceId){
+    setStatus('Generating voice…', 'warn');
+    const t1 = performance.now();
+    try{
+      const audioUrl = await callElevenLabs(reply, voiceId, key);
+      ttsMs = Math.round(performance.now() - t1);
+      const audio = new Audio(audioUrl);
+      waveform.classList.add('active');
+      setStatus('Speaking…', 'ok');
+      audio.onended = () => { waveform.classList.remove('active'); setStatus('Idle'); };
+      audio.play();
+    }catch(e){
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = e.message;
+      bubble.appendChild(meta);
+      setStatus('Idle');
+    }
+  } else {
+    setStatus('Idle');
+    if(wantsVoice && !key){
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = 'Add an ElevenLabs API key to hear this reply spoken.';
+      bubble.appendChild(meta);
+    }
+  }
+
+  const metaTag = document.createElement('span');
+  metaTag.className = 'meta';
+  metaTag.textContent = `Match ${llmMs}ms` + (ttsMs!==null ? ` · TTS ${ttsMs}ms` : '');
+  bubble.appendChild(metaTag);
+
+  addQaRow(text.slice(0,40) + (text.length>40?'…':''), llmMs, ttsMs, reply.length);
+  sendBtn.disabled = false;
+}
+
+function resetConversation(){
+  conversation = [];
+  turnCount = 0;
+  state = freshState();
+  chatLog.innerHTML = '<div class="empty">No messages yet — type below or hit the mic to start the call.</div>';
+  qaBody.innerHTML = '';
+  qaEmpty.style.display = 'block';
+  setStatus('Idle');
+}
+resetBtn.addEventListener('click', resetConversation);
+sendBtn.addEventListener('click', handleSend);
+userInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+});
+
+let recognition = null, listening = false;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if(SpeechRecognition){
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+  recognition.onresult = (e) => {
+    userInput.value = e.results[0][0].transcript;
+    handleSend();
+  };
+  recognition.onend = () => { listening = false; micBtn.classList.remove('live'); };
+  micBtn.addEventListener('click', () => {
+    if(listening){ recognition.stop(); return; }
+    listening = true;
+    micBtn.classList.add('live');
+    setStatus('Listening…', 'ok');
+    recognition.start();
+  });
+} else {
+  micBtn.disabled = true;
+  micBtn.title = "Speech recognition not supported in this browser — try Chrome";
+}
+</script>
+</body>
+</html>
