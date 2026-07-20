@@ -306,7 +306,9 @@ const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','
 const NUMBER_WORDS = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, twenty:20 };
 
 function extractPartySize(text){
-  let m = text.match(/\b(?:party of|table for|for|we'?re)\s*(\d{1,2})\b/i);
+  // Negative lookahead on the colon stops "for 3:30" (a time) from being
+  // misread as a party size of 3 — bare "for" is a weak, ambiguous cue.
+  let m = text.match(/\b(?:party of|table for|for|we'?re)\s*(\d{1,2})\b(?!\s*:)/i);
   if(m) return parseInt(m[1], 10);
   m = text.match(/\b(\d{1,2})\s*(?:people|guests|of us|persons?|adults?|top)\b/i);
   if(m) return parseInt(m[1], 10);
@@ -343,8 +345,9 @@ function extractDate(text){
 
 function extractTime(text){
   const lower = text.toLowerCase();
-  let m = lower.match(/\b(1[0-2]|0?[1-9])(:[0-5]\d)?\s*(am|pm)\b/);
-  if(m) return m[0];
+  // Accept "p.m."/"a.m." (with periods) as well as "pm"/"am".
+  let m = lower.match(/\b(1[0-2]|0?[1-9])(:[0-5]\d)?\s*(a\.?m\.?|p\.?m\.?)/);
+  if(m) return m[0].replace(/\.+$/, '');
   m = lower.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
   if(m) return m[0];
   if(/\bnoon\b/.test(lower)) return 'noon';
