@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PW Media Voice Agent — Technical Design Document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --blue:#2E5C99; --blue-light:#4A7DC4; --lime:#7c8c1e; --ink:#0f1620;
+    --text:#1f2733; --muted:#5b6675; --line:#e2e8f0; --line-strong:#cbd5e1;
+    --bg:#ffffff; --panel:#f7f9fc; --accent:#eef4fc;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f5;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.65;}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:0.9em;background:#eef2f7;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:#233;}
+
+  .sheet{max-width:900px;margin:28px auto;background:var(--bg);border:1px solid var(--line-strong);box-shadow:0 8px 40px rgba(20,40,80,.10);}
+  .band{height:6px;background:linear-gradient(90deg,var(--blue),var(--blue-light) 55%,#C9E24A);}
+  .doc{padding:44px 56px 60px;}
+
+  /* Title block */
+  .cover{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:10px;}
+  .brand{font-weight:700;font-size:20px;letter-spacing:-.01em;color:var(--ink);}
+  .brand span{color:var(--blue-light);}
+  .doc-type{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  .cover h1{font-size:30px;line-height:1.2;margin:18px 0 6px;color:var(--ink);letter-spacing:-.015em;}
+  .cover .tagline{color:var(--muted);font-size:15px;margin:0;}
+  .metatab{display:flex;flex-wrap:wrap;gap:0;margin-top:22px;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .metatab div{flex:1 1 25%;min-width:150px;padding:10px 14px;border-right:1px solid var(--line);}
+  .metatab div:last-child{border-right:none;}
+  .metatab .k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  .metatab .v{font-size:13.5px;font-weight:600;color:var(--text);margin-top:2px;}
+
+  h2{font-size:19px;color:var(--ink);margin:38px 0 4px;padding-top:14px;border-top:1px solid var(--line);letter-spacing:-.01em;}
+  h2 .num{color:var(--blue-light);font-weight:700;margin-right:10px;}
+  h3{font-size:15px;color:var(--blue);margin:22px 0 4px;}
+  p{margin:8px 0;}
+  ul,ol{margin:8px 0 8px;padding-left:22px;}
+  li{margin:4px 0;}
+  .lead{font-size:15.5px;color:#2b3644;}
+
+  figure{margin:20px 0 8px;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);overflow:hidden;}
+  figure .fig-body{padding:20px 16px 8px;overflow-x:auto;}
+  figure .mermaid{display:flex;justify-content:center;}
+  figcaption{font-size:12.5px;color:var(--muted);padding:10px 16px;border-top:1px solid var(--line);background:#fff;}
+  figcaption b{color:var(--blue);}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--accent);color:var(--blue);font-weight:600;font-size:12px;letter-spacing:.02em;}
+  tbody tr:nth-child(even){background:#fafbfd;}
+
+  .callout{border:1px solid var(--line-strong);border-left:4px solid var(--blue-light);background:var(--accent);border-radius:8px;padding:14px 18px;margin:16px 0;}
+  .callout .t{font-weight:700;color:var(--blue);font-size:13px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:680px){.two{grid-template-columns:1fr;}.doc{padding:30px 22px;}}
+
+  footer{padding:18px 56px 30px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line);}
+  @media print{
+    body{background:#fff;} .sheet{box-shadow:none;border:none;margin:0;max-width:none;}
+    h2{break-after:avoid;} figure{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="band"></div>
+  <div class="doc">
+
+    <!-- COVER -->
+    <div class="cover">
+      <div class="brand">pw<span>media</span>.</div>
+      <div class="doc-type">Technical Design Document</div>
+      <h1>AI Voice Agent — Architecture &amp; Design</h1>
+      <p class="tagline">A browser-based conversational voice agent that greets callers, answers questions from a PW&nbsp;Media knowledge base, and books discovery calls.</p>
+      <div class="metatab">
+        <div><div class="k">Product</div><div class="v">PW Media Voice Agent ("Jordan")</div></div>
+        <div><div class="k">Version</div><div class="v">1.0 — Demo</div></div>
+        <div><div class="k">Date</div><div class="v">July 2026</div></div>
+        <div><div class="k">Status</div><div class="v">Live prototype</div></div>
+      </div>
+    </div>
+
+    <!-- 1. OVERVIEW -->
+    <h2><span class="num">1</span>Executive summary</h2>
+    <p class="lead">The PW Media Voice Agent is a self-contained web application that behaves like a friendly front-desk receptionist named "Jordan." A visitor can <b>speak or type</b>; the agent understands them, answers questions about PW Media using a curated knowledge base, and collects the details needed to schedule a discovery call — then hands that lead to the team.</p>
+    <p>The system is deliberately simple and robust: it runs <b>entirely in the browser</b> with no application server to build, secure, or maintain. Its conversational "brain" is <b>rule-based rather than a large language model</b>, which makes every response instant, predictable, and strictly on-brand — it cannot go off-script or invent facts. Voice is handled by the browser's built-in speech recognition and a streaming text-to-speech service for a natural spoken reply.</p>
+    <div class="callout">
+      <div class="t">At a glance</div>
+      <p style="margin:0;">One static HTML file · No backend · Deterministic rule-based engine (no LLM) · Live speech-to-text · Low-latency streaming voice · Hosted on Netlify, deployed automatically from GitHub on every change.</p>
+    </div>
+
+    <!-- 2. SYSTEM ARCHITECTURE -->
+    <h2><span class="num">2</span>System architecture</h2>
+    <p>The solution has three zones: everything that runs in the <b>caller's browser</b> (the whole application), the <b>external voice service</b> it calls, and the <b>hosting pipeline</b> that delivers it. There is no database or server-side code — the app is a single file served as a static asset.</p>
+
+    <figure>
+      <div class="fig-body">
+        <pre class="mermaid">
+flowchart TB
+  classDef client fill:#eef4fc,stroke:#4A7DC4,color:#12213a,stroke-width:1px;
+  classDef engine fill:#f4f8dd,stroke:#a9c22e,color:#3f4a12,stroke-width:1px;
+  classDef ext fill:#12213a,stroke:#12213a,color:#eaf1fb;
+  classDef host fill:#eef2f7,stroke:#94a3b8,color:#22303f;
+
+  Caller(["👤 Caller<br/>speaks or types"]):::client
+
+  subgraph BROWSER["Caller's browser — the entire app runs here"]
+    direction TB
+    STT["Speech-to-Text<br/>Web Speech API"]:::client
+    ENG{{"Conversation Engine<br/>rule-based NLU · no LLM"}}:::engine
+    UI["Chat UI · live captions<br/>reactive visuals · progress tracker"]:::client
+    PLAY["Streaming audio playback<br/>MediaSource Extensions"]:::client
+    KB[("PW Media knowledge base<br/>grounded in pwmedia.com")]:::engine
+  end
+
+  EL["ElevenLabs<br/>Streaming Text-to-Speech API"]:::ext
+  GH["GitHub repository"]:::host
+  NF["Netlify<br/>static hosting · auto-deploy"]:::host
+
+  Caller -->|"voice"| STT
+  Caller -->|"text"| ENG
+  STT -->|"transcript"| ENG
+  ENG -->|"reads"| KB
+  ENG -->|"reply text"| PLAY
+  ENG -->|"synthesize speech"| EL
+  EL -->|"audio stream"| PLAY
+  PLAY -->|"Jordan's spoken reply"| Caller
+  ENG --> UI --> Caller
+  GH -->|"push to main"| NF
+  NF -.->|"serves the app"| BROWSER
+        </pre>
+      </div>
+      <figcaption><b>Figure 1.</b> High-level system architecture. Blue = client/UI, green = conversation logic &amp; knowledge, dark = external service, grey = hosting. The dashed arrow shows delivery; solid arrows show runtime data flow.</figcaption>
+    </figure>
+
+    <h3>2.1 Components</h3>
+    <table>
+      <thead><tr><th style="width:26%">Component</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><b>Speech-to-Text</b></td><td>Uses the browser's <span class="mono">Web Speech API</span> to transcribe the caller in real time, showing live word-by-word captions and auto-submitting when they pause. Runs hands-free: one tap starts it and it stays on for the whole call.</td></tr>
+        <tr><td><b>Conversation Engine</b></td><td>The decision-making core. Extracts information, recognises intent, tracks the discovery-call fields, and chooses what to say. Fully rule-based — deterministic, instant, and incapable of producing off-brand or invented answers.</td></tr>
+        <tr><td><b>Knowledge base</b></td><td>A curated set of question patterns and answers grounded in the real <span class="mono">pwmedia.com</span> — services, differentiators, stats, clients, pricing approach, contact details, and objection handling.</td></tr>
+        <tr><td><b>Chat &amp; visual UI</b></td><td>Message thread, "Jordan is speaking…" status, a live caption panel, an animated visual stage that reacts to the topic, and a discovery-call progress tracker.</td></tr>
+        <tr><td><b>Streaming playback</b></td><td>Plays Jordan's voice using <span class="mono">MediaSource Extensions</span> so audio begins on the first chunk received rather than waiting for the whole clip — the main latency win.</td></tr>
+        <tr><td><b>ElevenLabs TTS</b></td><td>External streaming text-to-speech that gives Jordan a natural, branded voice. Called directly from the browser.</td></tr>
+        <tr><td><b>GitHub → Netlify</b></td><td>Source of truth and delivery. Every push to <span class="mono">main</span> auto-deploys the static file to Netlify — no build step, live within seconds.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 3. REQUEST LIFECYCLE -->
+    <h2><span class="num">3</span>Call lifecycle — one conversational turn</h2>
+    <p>Every exchange follows the same predictable path. The sequence below traces a single turn from the moment the caller speaks to Jordan's spoken reply, and shows how the microphone coordinates with playback so the agent never "hears itself."</p>
+
+    <figure>
+      <div class="fig-body">
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor C as Caller
+  participant M as Web Speech API
+  participant E as Conversation Engine
+  participant K as Knowledge Base
+  participant T as ElevenLabs TTS
+  participant A as Browser Audio
+
+  C->>M: Speaks (hands-free mic)
+  M-->>E: Live transcript (interim → final)
+  Note over E: Extract info + detect intent
+  E->>K: Look up matching answer
+  K-->>E: On-brand reply text
+  E->>T: Send reply (streaming request)
+  T-->>A: Audio chunks (streamed)
+  A-->>C: Jordan speaks — starts on 1st chunk
+  Note over M,A: Mic auto-pauses while Jordan speaks,<br/>then re-arms itself for the next turn
+        </pre>
+      </div>
+      <figcaption><b>Figure 2.</b> Sequence of a single call turn. Perceived latency is "time to first audio chunk," not the time to generate the whole reply.</figcaption>
+    </figure>
+
+    <h3>3.1 Step-by-step</h3>
+    <ol>
+      <li><b>Capture:</b> the caller talks; the Web Speech API streams an interim transcript to the screen and finalises it on a pause.</li>
+      <li><b>Understand:</b> the engine extracts any structured details (name, business, phone) and classifies the caller's intent.</li>
+      <li><b>Decide &amp; answer:</b> it selects the appropriate on-brand response from the knowledge base, or advances the discovery-call intake.</li>
+      <li><b>Speak:</b> the reply text is sent to ElevenLabs; audio streams back and playback begins on the first chunk.</li>
+      <li><b>Re-arm:</b> the mic, paused during playback to avoid feedback, turns itself back on so the caller can simply keep talking.</li>
+    </ol>
+
+    <!-- 4. ENGINE LOGIC -->
+    <h2><span class="num">4</span>Conversation engine — decision logic</h2>
+    <p>This is the heart of the system and the reason it feels reliable. Rather than predicting text, the engine runs each caller turn through a fixed decision tree. It always tries to <b>answer the caller's question first</b>, captures any useful details, and only steers toward the discovery call gently — never nagging for the phone number on every turn.</p>
+
+    <figure>
+      <div class="fig-body">
+        <pre class="mermaid">
+flowchart TD
+  classDef step fill:#eef4fc,stroke:#4A7DC4,color:#12213a;
+  classDef dec fill:#f4f8dd,stroke:#a9c22e,color:#3f4a12;
+  classDef done fill:#12213a,stroke:#12213a,color:#eaf1fb;
+
+  A([Caller turn: text or transcript]):::step --> B["Extract structured info<br/>name · company · phone number"]:::step
+  B --> C{"Matches a known<br/>question / intent?"}:::dec
+  C -- Yes --> D["Answer from knowledge base<br/>varied, on-brand wording"]:::step
+  C -- No --> E{"Sounds like<br/>a question?"}:::dec
+  E -- Yes --> F["Acknowledge warmly ·<br/>offer the discovery call"]:::step
+  E -- No --> G{"Fills an<br/>open field?"}:::dec
+  G -- Yes --> H["Save field · confirm ·<br/>ask the next one"]:::step
+  G -- No --> I["Gentle re-prompt"]:::step
+  D --> J{"All 4 fields<br/>collected?"}:::dec
+  H --> J
+  F --> J
+  I --> J
+  J -- No --> K["Keep the conversation going ·<br/>nudge toward the call only occasionally"]:::step
+  J -- Yes --> L([Lead captured →<br/>team follows up]):::done
+        </pre>
+      </div>
+      <figcaption><b>Figure 3.</b> Conversation-engine decision flow for every caller turn. Diamonds are decisions; the four "fields" are name, business, what they need, and callback number.</figcaption>
+    </figure>
+
+    <h3>4.1 What each stage does</h3>
+    <ul>
+      <li><b>Extract</b> — pattern rules pull structured data out of natural speech ("this is Sam from Bright Path Dental" → name = Sam, business = Bright Path Dental), with guards so ordinary questions aren't mistaken for answers.</li>
+      <li><b>Intent match</b> — the turn is tested against ~30 question patterns: pricing, services, "are you a robot?", guarantees/ROI, clients, contracts, timelines, location, reviews, objections, and more.</li>
+      <li><b>Slot filling</b> — the engine tracks the four discovery-call fields and knows the difference between a caller <em>asking</em> something and <em>providing</em> an answer.</li>
+      <li><b>Natural response</b> — answers use varied wording so they don't sound copy-pasted, and the request for a callback number appears once, softly, when the caller is ready — not on every turn.</li>
+    </ul>
+
+    <!-- 5. DEPLOYMENT -->
+    <h2><span class="num">5</span>Deployment &amp; operations</h2>
+    <p>Because the app is a single static file, delivery is trivial and effectively free. There is nothing to run — updating the agent is just editing a file and pushing it.</p>
+    <figure>
+      <div class="fig-body">
+        <pre class="mermaid">
+flowchart LR
+  classDef s fill:#eef4fc,stroke:#4A7DC4,color:#12213a;
+  D["Edit the HTML file"]:::s --> P["Push to GitHub (main)"]:::s --> N["Netlify detects the change"]:::s --> B["Static deploy — no build step"]:::s --> L(["Live URL updates in seconds"]):::s
+        </pre>
+      </div>
+      <figcaption><b>Figure 4.</b> Continuous deployment. Each commit to <span class="mono">main</span> publishes automatically.</figcaption>
+    </figure>
+
+    <!-- 6. STACK -->
+    <h2><span class="num">6</span>Technology stack</h2>
+    <table>
+      <thead><tr><th style="width:30%">Layer</th><th>Technology</th></tr></thead>
+      <tbody>
+        <tr><td>Application</td><td>Single self-contained HTML / CSS / JavaScript file (no framework, no build)</td></tr>
+        <tr><td>Speech-to-text</td><td>Browser Web Speech API (<span class="mono">SpeechRecognition</span>), with live interim results</td></tr>
+        <tr><td>Conversation logic</td><td>Custom rule-based NLU — regex extractors, intent/FAQ matching, slot-filling state machine</td></tr>
+        <tr><td>Text-to-speech</td><td>ElevenLabs streaming TTS API + browser <span class="mono">MediaSource Extensions</span> for progressive playback</td></tr>
+        <tr><td>UI &amp; visuals</td><td>Hand-built CSS (glassmorphism), animated SVG scene stage, live captions, progress tracker</td></tr>
+        <tr><td>Source control</td><td>GitHub</td></tr>
+        <tr><td>Hosting / CI-CD</td><td>Netlify static hosting with auto-deploy on push</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 7. DATA + VIEWS -->
+    <h2><span class="num">7</span>Data captured &amp; operating modes</h2>
+    <div class="two">
+      <div>
+        <h3>7.1 Lead data</h3>
+        <p>The agent collects four fields to qualify and schedule a discovery call:</p>
+        <ol>
+          <li>Caller's name</li>
+          <li>Business / company</li>
+          <li>What they want to improve</li>
+          <li>Callback number</li>
+        </ol>
+        <p style="font-size:13px;color:var(--muted);">Keys for the voice service are held client-side; no caller data is stored on a server in this prototype.</p>
+      </div>
+      <div>
+        <h3>7.2 Two views</h3>
+        <p>A single page serves two audiences, switchable from the header:</p>
+        <ul>
+          <li><b>Caller view</b> — clean chat + visuals only.</li>
+          <li><b>Team view</b> — adds a configuration panel and a per-turn QA/latency log for internal testing.</li>
+        </ul>
+        <h3>7.3 Modes</h3>
+        <p><b>Front-desk intake</b> is live today. <b>Discovery Call mode</b> — a deeper, guided call flow — is marked <em>Coming soon</em> in the UI.</p>
+      </div>
+    </div>
+
+    <!-- 8. RATIONALE -->
+    <h2><span class="num">8</span>Design rationale</h2>
+    <table>
+      <thead><tr><th style="width:34%">Decision</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Rule-based engine (no LLM)</td><td>Instant responses, zero hallucination risk, every answer pre-approved and on-brand, no per-call model cost.</td></tr>
+        <tr><td>No backend server</td><td>Cheaper, more secure, and trivially portable — the whole product is one file that can be hosted or embedded anywhere.</td></tr>
+        <tr><td>Streaming voice</td><td>Jordan starts speaking on the first audio chunk, making the conversation feel real-time rather than "processing…".</td></tr>
+        <tr><td>Config-driven knowledge</td><td>Services, answers, and intake fields are plain configuration, so new questions or a future Discovery Call mode drop straight in.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 9. ROADMAP -->
+    <h2><span class="num">9</span>Roadmap</h2>
+    <ul>
+      <li><b>Discovery Call mode</b> — a longer, guided qualification flow (shown as "Coming soon").</li>
+      <li><b>Lead delivery</b> — post captured leads to a CRM, email, or PW Media's Click2Dash platform.</li>
+      <li><b>Analytics</b> — persist the per-turn QA log for conversation quality tracking.</li>
+      <li><b>Embed</b> — drop the agent into pwmedia.com as a click-to-talk widget.</li>
+    </ul>
+
+  </div>
+  <footer>
+    PW Media · AI Voice Agent · Technical Design Document v1.0 · Live demo:
+    loquacious-kangaroo-2b4960.netlify.app/pwmedia-voice-agent.html<br/>
+    Tip: open in a browser and print to PDF (Cmd/Ctrl&nbsp;+&nbsp;P) to produce a shareable document. Diagrams render automatically.
+  </footer>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    securityLevel: 'loose',
+    fontFamily: 'Inter, sans-serif',
+    themeVariables: {
+      primaryColor: '#eef4fc',
+      primaryBorderColor: '#4A7DC4',
+      primaryTextColor: '#12213a',
+      lineColor: '#64748b',
+      fontSize: '13px',
+      clusterBkg: '#f7f9fc',
+      clusterBorder: '#cbd5e1'
+    },
+    flowchart: { curve: 'basis', nodeSpacing: 40, rankSpacing: 44, padding: 10 },
+    sequence: { actorMargin: 46, mirrorActors: false, noteFontSize: 12 }
+  });
+</script>
+</body>
+</html>
