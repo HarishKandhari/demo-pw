@@ -422,7 +422,12 @@ const engineConfig = {
     },
     faqs: [
       { test: /\bclos(e|ing)\b|\bhours\b|open until|what time.*open/i, reply: () => "We're open until 10pm, and we can't seat parties larger than 12 — want to go ahead and book?" },
-      { test: /\bavailab(?:le|ility)\b|\bopenings?\b|what (?:times|slots)|any slots/i, reply: state => `${state.date ? 'For ' + state.date : "Tonight"} we've got openings at 6:00, 6:45, and 8:15 — would any of those work, or did you have a specific time in mind?` },
+      { test: /\bavailab(?:le|ility)\b|\bopenings?\b|\bslots?\b|\bfree\b|what (?:times|slots)|any slots/i, reply: state => {
+        if(state.time){
+          return `Yes — ${state.time}${state.date ? ' on ' + state.date : ''} is open. Want me to lock that in, or would you rather see other openings (6:00, 6:45, 8:15)?`;
+        }
+        return `${state.date ? 'For ' + state.date : "Tonight"} we've got openings at 6:00, 6:45, and 8:15 — would any of those work, or did you have a specific time in mind?`;
+      } },
       { test: /\bwhere\b|\baddress\b|\blocated\b|\blocation\b/i, reply: () => "We're at 4210 Main Street in Columbia, MD, right next to the library." },
       { test: /\bpark(ing)?\b/i, reply: () => "There's a small lot behind the building, plus free street parking after 6pm." },
       { test: /\bmenu\b|vegetarian|vegan|gluten|allerg/i, reply: () => "We've got a full Italian menu with vegetarian and gluten-free options — just flag any allergies for your server." },
