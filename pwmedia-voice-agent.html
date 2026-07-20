@@ -315,11 +315,11 @@
       </div>
 
       <div class="chat-log" id="chatLog">
-        <div class="empty">Say hello, or tap the mic to start talking.</div>
+        <div class="empty">Tap the mic once and just start talking — it stays on the whole call.</div>
       </div>
 
       <div class="composer">
-        <button class="btn-glass" id="micBtn" title="Speak" aria-label="Speak">
+        <button class="btn-glass" id="micBtn" title="Tap to start talking (hands-free)" aria-label="Start talking hands-free">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
         </button>
         <textarea id="userInput" placeholder="Type here, or tap the mic to talk…"></textarea>
@@ -336,7 +336,7 @@
     <div class="card stage">
       <div class="stage-cap">
         <div class="cap-head"><span class="cap-dot" id="capDot"></span><span id="capLabel">Ready when you are</span></div>
-        <div class="cap-text" id="capText">Tap the mic and start talking — your words appear here live.</div>
+        <div class="cap-text" id="capText">Tap the mic once — it stays on so you can just keep talking.</div>
       </div>
       <div class="scene" id="scene"></div>
       <div class="progress" id="progress">
@@ -917,7 +917,9 @@ async function handleSend(){
         setStatus('Jordan is speaking…', 'ok');
       });
       ttsMs = firstByteMs;
-      audio.onended = () => { waveform.classList.remove('active'); setStatus(''); };
+      // In hands-free mode, resume listening only AFTER Jordan finishes
+      // speaking — so the mic doesn't pick up his own voice.
+      audio.onended = () => { waveform.classList.remove('active'); setStatus(''); resumeListening(); };
     }catch(e){
       typingEl.remove();
       if(TEAM_MODE){
@@ -932,6 +934,7 @@ async function handleSend(){
         bubble.appendChild(meta);
       }
       setStatus('');
+      resumeListening();
     }
   } else {
     setStatus('');
@@ -941,6 +944,7 @@ async function handleSend(){
       meta.textContent = 'Add an ElevenLabs API key to hear this reply spoken.';
       bubble.appendChild(meta);
     }
+    resumeListening();
   }
 
   if(TEAM_MODE){
@@ -958,14 +962,15 @@ function resetConversation(){
   conversation = [];
   turnCount = 0;
   state = freshState();
-  chatLog.innerHTML = '<div class="empty">Say hello, or tap the mic to start talking.</div>';
+  chatLog.innerHTML = '<div class="empty">Tap the mic once and just start talking — it stays on the whole call.</div>';
   qaBody.innerHTML = '';
   qaEmpty.style.display = 'block';
   setStatus('');
+  if(typeof stopHandsFree === 'function') stopHandsFree();
   capDot.className = 'cap-dot';
   capLabel.textContent = 'Ready when you are';
   capText.className = 'cap-text';
-  capText.textContent = 'Tap the mic and start talking — your words appear here live.';
+  capText.textContent = 'Tap the mic once — it stays on so you can just keep talking.';
   setScene('idle');
   updateProgress();
 }
@@ -975,13 +980,51 @@ userInput.addEventListener('keydown', e => {
   if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
 });
 
-let recognition = null, listening = false;
+// ---- Hands-free / always-on microphone -----------------------------------
+// Tap the mic ONCE to start the call; it then stays on for the whole
+// conversation. After each turn the mic auto-resumes, pausing only while
+// Jordan is speaking so it never hears its own voice. Tap again to stop.
+let recognition = null;
+let handsFree = false;      // is always-on mode active?
+let recognizing = false;    // is recognition actively running right now?
+let awaitingReply = false;  // did we just capture speech and are replying?
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function startListening(){
+  if(!recognition || recognizing) return;
+  try{ recognition.start(); }catch(e){ /* already starting; ignore */ }
+}
+// Called once a reply is fully delivered (after Jordan finishes speaking).
+function resumeListening(){
+  awaitingReply = false;
+  if(handsFree) startListening();
+}
+function stopHandsFree(){
+  handsFree = false;
+  awaitingReply = false;
+  if(recognizing && recognition) { try{ recognition.stop(); }catch(e){} }
+  micBtn.classList.remove('live');
+  capDot.classList.remove('live');
+  micBtn.title = 'Tap to start talking (hands-free)';
+  setStatus('');
+}
+
 if(SpeechRecognition){
   recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = true;   // stream partial words so captions feel live
+  recognition.continuous = false;       // one utterance per result; we re-arm it
+  recognition.interimResults = true;    // stream partial words so captions feel live
   recognition.lang = 'en-US';
+
+  recognition.onstart = () => {
+    recognizing = true;
+    micBtn.classList.add('live');
+    capDot.classList.add('live');
+    capLabel.textContent = handsFree ? 'Listening — hands-free' : 'Listening…';
+    capText.className = 'cap-text interim';
+    capText.innerHTML = 'Go ahead, I&#39;m listening<span class="caret"></span>';
+    setStatus('Listening…', 'ok');
+  };
+
   recognition.onresult = (e) => {
     let interim = '', final = '';
     for(let i = e.resultIndex; i < e.results.length; i++){
@@ -997,25 +1040,32 @@ if(SpeechRecognition){
       userInput.value = interim;
     }
     if(final){
+      awaitingReply = true;   // stop onend from re-arming until Jordan replies
       userInput.value = final;
       handleSend();
     }
   };
+
+  // Silence / no-speech errors are normal in always-on mode — just let onend
+  // re-arm the mic rather than surfacing anything to the caller.
+  recognition.onerror = () => {};
+
   recognition.onend = () => {
-    listening = false;
-    micBtn.classList.remove('live');
-    capDot.classList.remove('live');
+    recognizing = false;
+    // Keep the mic lit while hands-free is on (even during the brief gaps);
+    // drop it only when the caller has actually turned hands-free off.
+    if(!handsFree){ micBtn.classList.remove('live'); capDot.classList.remove('live'); }
+    // Re-arm between turns, but never while Jordan is mid-reply.
+    if(handsFree && !awaitingReply){ setTimeout(startListening, 300); }
   };
+
   micBtn.addEventListener('click', () => {
-    if(listening){ recognition.stop(); return; }
-    listening = true;
+    if(handsFree){ stopHandsFree(); return; }
+    handsFree = true;
+    awaitingReply = false;
+    micBtn.title = 'Hands-free on — tap to stop';
     micBtn.classList.add('live');
-    capDot.classList.add('live');
-    capLabel.textContent = 'Listening…';
-    capText.className = 'cap-text interim';
-    capText.innerHTML = 'Go ahead, I&#39;m listening<span class="caret"></span>';
-    setStatus('Listening…', 'ok');
-    recognition.start();
+    startListening();
   });
 } else {
   micBtn.disabled = true;
