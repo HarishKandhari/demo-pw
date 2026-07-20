@@ -316,15 +316,18 @@ function extractPartySize(text){
 
 function extractDate(text){
   const lower = text.toLowerCase();
-  if(/\btonight\b/.test(lower)) return 'tonight';
-  if(/\btoday\b/.test(lower)) return 'today';
-  if(/\btomorrow\b/.test(lower)) return 'tomorrow';
+  // Drop negated day-words first ("not tonight", "not tomorrow") so a
+  // correction like "not tonight, tomorrow" doesn't get misread as "tonight".
+  const cleaned = lower.replace(/\b(?:not|n't|don'?t|do not|isn'?t|won'?t|never)\s+(tonight|today|tomorrow)\b/g, '');
+  if(/\btomorrow\b/.test(cleaned)) return 'tomorrow';
+  if(/\btonight\b/.test(cleaned)) return 'tonight';
+  if(/\btoday\b/.test(cleaned)) return 'today';
   for(const d of DAY_NAMES){
-    if(new RegExp('\\b' + d + '\\b').test(lower)) return d.charAt(0).toUpperCase() + d.slice(1);
+    if(new RegExp('\\b' + d + '\\b').test(cleaned)) return d.charAt(0).toUpperCase() + d.slice(1);
   }
-  let m = lower.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-]\d{2,4})?\b/);
+  let m = cleaned.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-]\d{2,4})?\b/);
   if(m) return m[0];
-  m = lower.match(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/);
+  m = cleaned.match(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/);
   if(m) return m[0];
   return null;
 }
@@ -407,7 +410,7 @@ const engineConfig = {
     },
     faqs: [
       { test: /clos(e|ing)|\bhours\b|open until|what time.*open/i, reply: () => "We're open until 10pm, and we can't seat parties larger than 12 — want to go ahead and book?" },
-      { test: /available|opening|what (?:times|slots)|any slots/i, reply: () => "Tonight we've got openings at 6:00, 6:45, and 8:15 — would any of those work, or did you have a specific time in mind?" },
+      { test: /available|opening|what (?:times|slots)|any slots/i, reply: state => `${state.date ? 'For ' + state.date : "Tonight"} we've got openings at 6:00, 6:45, and 8:15 — would any of those work, or did you have a specific time in mind?` },
       { test: /where|address|located|location/i, reply: () => "We're at 4210 Main Street in Columbia, MD, right next to the library." },
       { test: /park(ing)?/i, reply: () => "There's a small lot behind the building, plus free street parking after 6pm." },
       { test: /menu|vegetarian|vegan|gluten|allerg/i, reply: () => "We've got a full Italian menu with vegetarian and gluten-free options — just flag any allergies for your server." }
@@ -472,16 +475,15 @@ function getScriptedReply(templateKey, rawText){
   // 1. FAQ-style answers can fire at any point in the call.
   const faq = cfg.faqs.find(f => f.test.test(rawText));
 
-  // 2. Try to extract every still-missing slot from this message —
-  //    callers rarely answer questions in the exact order we asked.
+  // 2. Try to extract every slot from this message — callers rarely answer
+  //    in the order we asked, and may correct something they said earlier,
+  //    so a new value always overwrites a stale one instead of being ignored.
   const newlyFilled = [];
   cfg.slots.forEach(slot => {
-    if(state[slot.key] == null){
-      const val = slot.extract(rawText);
-      if(val != null){
-        state[slot.key] = val;
-        newlyFilled.push(slot);
-      }
+    const val = slot.extract(rawText);
+    if(val != null && val !== state[slot.key]){
+      state[slot.key] = val;
+      newlyFilled.push(slot);
     }
   });
 
@@ -516,11 +518,13 @@ function getScriptedReply(templateKey, rawText){
     return cfg.greeting;
   }
 
-  // 5. Answer FAQs directly, then steer back to whatever's still missing.
+  // 5. Answer FAQs directly, then steer back to whatever's still missing —
+  //    but don't silently swallow anything the caller corrected or supplied.
   if(faq){
     const ans = faq.reply(state);
-    if(faq.terminal) return ans;
-    return missingAfter ? ans + ' ' + missingAfter.ask : ans;
+    const ack = newlyFilled.length > 0 ? `Got it — ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ` : '';
+    if(faq.terminal) return ack + ans;
+    return missingAfter ? ack + ans + ' ' + missingAfter.ask : ack + ans;
   }
 
   // 6. Normal slot-filling turn.
