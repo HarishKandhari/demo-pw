@@ -523,8 +523,8 @@ function looksLikeQuestion(text){
   // trailing "?", a leading question word (after optional filler), or an
   // embedded ask like "tell me what" / "how does" / "can you explain".
   if(/\?\s*$/.test(t)) return true;
-  if(/^(?:so|ok(?:ay)?|well|and|but|hey|um|uh|yeah|actually|also|now|just|first|quick(?:ly)?|one)?\s*,?\s*(what|how|does|do|did|is|are|can|could|when|where|why|will|would|should|who|which|tell me|explain|walk me)\b/i.test(t)) return true;
-  if(/\b(tell me (?:about|what|how|more|why)|what(?:'s| is| are| do| does| can|ever)|how (?:do|does|can|much|long|come)|can you (?:tell|explain|help|do|walk)|do you (?:offer|have|do|work|guarantee|provide)|are you (?:a |an |the |able|really)|why (?:should|would|do|is))\b/i.test(t)) return true;
+  if(/^(?:so|ok(?:ay)?|well|and|but|hey|um|uh|yeah|actually|also|now|just|first|quick(?:ly)?|one|like|so like|alright)?\s*,?\s*(what|how|does|do|did|is|are|can|could|when|where|why|will|would|should|who|which|tell me|explain|walk me)\b/i.test(t)) return true;
+  if(/\b(tell me (?:about|what|how|more|why)|what(?:'s| is| are| do| does| can| would| could|ever)|how (?:do|does|can|much|long|come|would)|(?:can|would|could|will|do|are|have) you\b|why (?:should|would|do|is)|whats\b)/i.test(t)) return true;
   return false;
 }
 function extractCompany(text){
@@ -532,8 +532,11 @@ function extractCompany(text){
   // too noisy — "more patients from google", "spam me with texts", "help with
   // SEO" would all get mis-read as a company. Plain one-word answers like
   // "Bloom Dental" are handled by the free-text slot capture instead.
+  // Note: no bare "business is" / "company is" — that mis-fires on
+  // "business is slow", "company is growing". Require a possessive
+  // ("my/our/the business is X") or an explicit "named/called".
   const m = text.match(/(?:my name is|this is|i'?m|name'?s)\s+[A-Za-z][\w'\-]*\s+(?:from|with|at)\s+([A-Za-z0-9&'.\s]+)/i)
-         || text.match(/(?:calling from|company (?:is |named |called )|business (?:is |named |called )|we'?re (?:called |with |at )|work(?:ing)? (?:at|for)|my (?:company|business|shop|store|firm|practice) is)\s*([A-Za-z0-9&'.\s]+)/i);
+         || text.match(/(?:calling from|company (?:named|called)|business (?:named|called)|we'?re (?:called|with|at)|work(?:ing)? (?:at|for)|(?:my|our|the) (?:company|business|shop|store|firm|practice|brand) is(?: called| named)?)\s+([A-Za-z0-9&'.\s]+)/i);
   if(!m) return null;
   // Walk words after the connector and stop at the first filler/pronoun word
   // that signals the company name has ended.
@@ -580,6 +583,16 @@ const cfg = {
     { test: /are you (?:a |an )?(?:real |actual )?(?:robot|bot|human|person|ai|a\.i\.|machine|computer|chatbot)|am i (?:talking|speaking|chatting) (?:to|with) (?:a )?(?:real |actual )?(?:human|person|robot|bot|machine|someone)|is this (?:a )?(?:real |live )?(?:person|human|bot|robot|recording|machine)|are you real|you'?re (?:a )?(?:bot|robot|ai)/i,
       reply: () => "Ha, fair question — I'm PW Media's AI assistant, so you're talking to a very well-informed robot. I can answer just about anything about us, and a real person from our team follows up with you personally too." },
 
+    // Caller asks us to stop pushing for their info — acknowledge and back off,
+    // don't immediately re-ask the same slot.
+    { test: /stop asking|quit asking|don'?t (?:keep |need to )?ask|stop (?:pushing|bugging)|not (?:going to |gonna )?(?:give|share|tell)|won'?t (?:give|share)|first answer|answer my question|before (?:i|you) (?:give|do)/i,
+      smalltalk: true, noReask: true,
+      reply: () => "Totally fair — I won't push. Ask me anything you'd like, and whenever you're ready you can reach us directly at (866) 291-9850." },
+
+    // Misconception: "you only do X" / "is that all you do" — correct it warmly.
+    { test: /(?:you|pw ?media|they|it) only (?:do|does|work|works|offer|handle|focus)|only (?:do|does|work|works|offer)s?\s+(?:for\s+)?(?:seo|websites?|ads?|marketing|design|that|this)|(?:is that|that'?s|thats) all (?:you|pw|it|they)|all (?:you|they) (?:do|offer) is/i,
+      reply: () => "Oh, we do a lot more than that — full-funnel is really the whole point. Web design, paid media and Connected TV, content, SEO, local visibility, plus our own AI tools like Click2Dash. Whatever the goal, we've likely got it covered." },
+
     // Objections / brush-offs — lean into the no-pressure ethos
     { test: /not interested|no thanks|just (?:looking|browsing|curious|checking)|not (?:ready|sure|now)|maybe later|too expensive|can'?t afford|already (?:have|got|working with) (?:an? )?(?:agency|marketer|team|company)|we'?re (?:good|all set|fine)|stop calling|leave me alone/i,
       reply: () => "Totally understand, and no pressure at all — even if you're just exploring, we're happy to give you a second opinion or a quick visibility check with no strings attached." },
@@ -608,8 +621,9 @@ const cfg = {
     { test: /how long (?:does|will|before|until|to)|timeline|turnaround|how (?:soon|fast|quick(?:ly)?)|when (?:will|do) i see|ramp up|how quickly/i,
       reply: () => "It really depends on the project — a website is different from an ongoing ad campaign — so we'll map out a realistic timeline together on the discovery call." },
 
-    // Pricing (plain, not an objection)
-    { test: /\bprice\b|pricing|\bcost(?:s|ing)?\b|how much|\bfees?\b|\brates?\b|\bbudget\b|expensive|cheap|per month|monthly (?:cost|fee)|quote/i,
+    // Pricing (plain, not an objection) — also catches dollar amounts and
+    // hypotheticals like "if I gave you 500 dollars what would that get me".
+    { test: /\bprice\b|pricing|\bcost(?:s|ing)?\b|how much|\bfees?\b|\brates?\b|\bbudget\b|expensive|cheap|per month|monthly (?:cost|fee)|quote|\bdollars?\b|\bbucks\b|\$\s*\d|\d+\s*(?:dollars|bucks|k\b)|what (?:would|could|do) i get|if i (?:gave|spent|paid|had|have)\b/i,
       reply: () => "Everything we do is fully custom, so pricing really depends on your goals — that's exactly what the discovery call is for, so we can put together something that fits you." },
 
     // Click2Dash / InsightsAI / the app
@@ -656,8 +670,8 @@ const cfg = {
     { test: /\bservices?\b|what (?:exactly |actually )?(?:do|does|can) (?:you|pw ?media|they|it)\b|what.{0,20}(?:you|pw ?media|they) (?:do|does|offer|provide|handle)|what.{0,14}pw ?media\b|everything you (?:do|offer)|full.funnel|what can you (?:do|help)/i,
       reply: () => "We're a full-funnel marketing and AI lab — web design, paid media and CTV, content, SEO, local visibility, plus automation tools like Click2Dash. Basically your whole marketing under one roof." },
 
-    // About / who is PW Media
-    { test: /tell me (?:more )?about|who (?:are|is) (?:you|pw ?media|the company)|what (?:is|are) pw ?media|your (?:company|story|background|mission)/i,
+    // About / who is PW Media  ("tell me about" / "tell more about")
+    { test: /tell (?:me )?(?:more )?about|who (?:are|is) (?:you|pw ?media|the company)|what (?:is|are) pw ?media|your (?:company|story|background|mission)/i,
       reply: () => "We're PW Media — a next-generation full-funnel marketing and AI lab. We connect brand, tech, and data to help businesses grow, from the very first search all the way to conversion." },
 
     // Industries
@@ -761,7 +775,9 @@ function getScriptedReply(rawText){
   if(faq){
     const ans = faq.reply(state);
     const ack = newlyFilled.length > 0 ? `${pickAck()} ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ` : '';
-    return missingAfter ? ack + ans + ' ' + bridgeAsk(missingAfter.ask) : ack + ans;
+    // Some FAQs (e.g. "stop asking me for my number") shouldn't be followed by
+    // re-asking the very slot the caller just pushed back on.
+    return (missingAfter && !faq.noReask) ? ack + ans + ' ' + bridgeAsk(missingAfter.ask) : ack + ans;
   }
 
   if(missingAfter){
