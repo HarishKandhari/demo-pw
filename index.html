@@ -303,6 +303,7 @@ function addQaRow(turn, llmMs, ttsMs, chars){
 // things in, instead of forcing a fixed script sequence.
 // ---------------------------------------------------------------------
 const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const NUMBER_WORDS = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, twenty:20 };
 
 function extractPartySize(text){
   let m = text.match(/\b(?:party of|table for|for|we'?re)\s*(\d{1,2})\b/i);
@@ -311,6 +312,14 @@ function extractPartySize(text){
   if(m) return parseInt(m[1], 10);
   m = text.match(/^\s*(\d{1,2})\s*$/);
   if(m) return parseInt(m[1], 10);
+  // Speech recognition often transcribes small numbers as words
+  // ("four people" instead of "4 people") — handle those too.
+  const lower = text.toLowerCase();
+  const words = Object.keys(NUMBER_WORDS).join('|');
+  m = lower.match(new RegExp(`\\b(?:party of|table for|for)\\s+(${words})\\b`));
+  if(m) return NUMBER_WORDS[m[1]];
+  m = lower.match(new RegExp(`\\b(${words})\\s+(?:people|guests|of us|persons?|adults?|top)\\b`));
+  if(m) return NUMBER_WORDS[m[1]];
   return null;
 }
 
@@ -409,11 +418,11 @@ const engineConfig = {
       return null;
     },
     faqs: [
-      { test: /clos(e|ing)|\bhours\b|open until|what time.*open/i, reply: () => "We're open until 10pm, and we can't seat parties larger than 12 — want to go ahead and book?" },
-      { test: /available|opening|what (?:times|slots)|any slots/i, reply: state => `${state.date ? 'For ' + state.date : "Tonight"} we've got openings at 6:00, 6:45, and 8:15 — would any of those work, or did you have a specific time in mind?` },
-      { test: /where|address|located|location/i, reply: () => "We're at 4210 Main Street in Columbia, MD, right next to the library." },
-      { test: /park(ing)?/i, reply: () => "There's a small lot behind the building, plus free street parking after 6pm." },
-      { test: /menu|vegetarian|vegan|gluten|allerg/i, reply: () => "We've got a full Italian menu with vegetarian and gluten-free options — just flag any allergies for your server." }
+      { test: /\bclos(e|ing)\b|\bhours\b|open until|what time.*open/i, reply: () => "We're open until 10pm, and we can't seat parties larger than 12 — want to go ahead and book?" },
+      { test: /\bavailab(?:le|ility)\b|\bopenings?\b|what (?:times|slots)|any slots/i, reply: state => `${state.date ? 'For ' + state.date : "Tonight"} we've got openings at 6:00, 6:45, and 8:15 — would any of those work, or did you have a specific time in mind?` },
+      { test: /\bwhere\b|\baddress\b|\blocated\b|\blocation\b/i, reply: () => "We're at 4210 Main Street in Columbia, MD, right next to the library." },
+      { test: /\bpark(ing)?\b/i, reply: () => "There's a small lot behind the building, plus free street parking after 6pm." },
+      { test: /\bmenu\b|vegetarian|vegan|gluten|allerg/i, reply: () => "We've got a full Italian menu with vegetarian and gluten-free options — just flag any allergies for your server." }
     ],
     closing: state => `Perfect, you're all set — ${state.partySize ? 'a table for ' + state.partySize : 'your table'} on ${state.date || 'your requested date'} at ${state.time || 'your requested time'}. We'll see you then! Anything else I can help with?`
   },
