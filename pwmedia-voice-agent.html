@@ -538,6 +538,8 @@ function extractPhone(text){
   return m ? m[0] : null;
 }
 const truncate = (v, n) => v.length > n ? v.slice(0, n) + '…' : v;
+// Lowercase the first character (so a slot's ask can be dropped mid-sentence).
+const lc1 = s => s.charAt(0).toLowerCase() + s.slice(1);
 
 // Varied acknowledgment phrasing so the agent doesn't repeat "Got it" on
 // every single turn — picked at random, small pool to stay recognizable.
@@ -557,7 +559,8 @@ const cfg = {
     { key: 'phone', ask: "Could I get a callback number so our team can set up your discovery call?", extract: extractPhone, label: v => v }
   ],
   faqs: [
-    { test: /\bservices?\b|what do you (?:do|offer)|what.*you (?:provide|handle)/i, reply: () => "We're a full-service digital marketing agency — web design, paid media, content strategy, and AI-driven automation tools like Click2Dash." },
+    { test: /why (?:should i |would i )?(?:choose|pick|work with|go with|use|hire)|what makes you (?:different|special|stand out)|why you\b/i, reply: () => "Great question — we pair creative marketing with our own AI platform, Click2Dash, so every decision is backed by real data. You get an agency that's part strategist, part technology partner, all focused on measurable growth." },
+    { test: /\bservices?\b|what (?:do|does|can) (?:you|pw ?media)|what.{0,14}(?:it|you) (?:do|does|offer|provide|handle)|tell me (?:more )?about|who are you|what (?:is|are) pw ?media/i, reply: () => "We're a full-service digital marketing agency — web design, paid media, content strategy, and AI-driven automation tools like Click2Dash. Whatever your goal, we build the strategy around it." },
     { test: /\bai\b|click2dash|insightsai|automat(?:e|ion)/i, reply: () => "Our Click2Dash platform, powered by InsightsAI, turns real-time data into smarter marketing decisions — think customer engagement analytics and workflow automation, tailored to your brand." },
     { test: /small business|startup|large compan|national brand/i, reply: () => "We work with businesses of every size, from local startups to national brands — we scale the strategy to fit your goals." },
     { test: /\bprice\b|\bpricing\b|\bcost\b|how much|\bbudget\b/i, reply: () => "Every plan is fully custom, so pricing depends on your goals — the best next step is a quick discovery call so we can put together a tailored quote." },
@@ -624,6 +627,11 @@ function getScriptedReply(rawText){
     // nothing new to extract, so just move the conversation forward.
     if(AFFIRMATIONS.test(rawText.trim())){
       return missingAfter.ask;
+    }
+    // A clear question we don't have a canned answer for shouldn't get
+    // "Sorry, I didn't catch that" — acknowledge it warmly and keep moving.
+    if(looksLikeQuestion(rawText)){
+      return `That's a great question — I can walk you through it on your discovery call. First though, ${lc1(missingAfter.ask)}`;
     }
     return `Sorry, I didn't quite catch that — ${missingAfter.ask}`;
   }
