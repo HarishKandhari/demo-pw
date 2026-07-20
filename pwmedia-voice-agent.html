@@ -435,15 +435,16 @@ function updateProgress(){
   if(next && !state.done) next.classList.add('active');
 }
 
-// Update the right stage from a completed turn. Prefer the topic in what the
-// CALLER said — Jordan's reply always lists "website, ads, SEO" in the slot
-// question, so reading the reply first would nearly always show "website".
+// Update the right stage from a completed turn. Only react to what the CALLER
+// actually said — Jordan's reply always lists "website, ads, SEO" in the slot
+// question, so reading the reply would show a "website" scene on every turn
+// even when the caller never mentioned one. If the caller hasn't named a
+// topic yet, keep the calm listening orb.
 function updateStage(userText, reply){
   if(state.done){ setScene('done'); }
   else {
-    const topic = detectTopic(userText) || detectTopic(reply);
+    const topic = detectTopic(userText);
     if(topic) setScene(topic);
-    else if(currentScene === 'done') setScene('idle');
   }
   updateProgress();
 }
