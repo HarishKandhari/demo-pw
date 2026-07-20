@@ -562,6 +562,7 @@ const lc1 = s => s.charAt(0).toLowerCase() + s.slice(1);
 // every single turn — picked at random, small pool to stay recognizable.
 const ACKS = ["Got it —", "Perfect —", "Great, thanks —", "Awesome —", "Sounds good —"];
 const pickAck = () => ACKS[Math.floor(Math.random() * ACKS.length)];
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
 // Short, low-content replies that just mean "continue" — shouldn't be
 // treated as "I didn't understand you".
@@ -624,7 +625,11 @@ const cfg = {
     // Pricing (plain, not an objection) — also catches dollar amounts and
     // hypotheticals like "if I gave you 500 dollars what would that get me".
     { test: /\bprice\b|pricing|\bcost(?:s|ing)?\b|how much|\bfees?\b|\brates?\b|\bbudget\b|expensive|cheap|per month|monthly (?:cost|fee)|quote|\bdollars?\b|\bbucks\b|\$\s*\d|\d+\s*(?:dollars|bucks|k\b)|what (?:would|could|do) i get|if i (?:gave|spent|paid|had|have)\b/i,
-      reply: () => "Everything we do is fully custom, so pricing really depends on your goals — that's exactly what the discovery call is for, so we can put together something that fits you." },
+      reply: () => pick([
+        "Everything we do is fully custom, so pricing really depends on your goals — that's exactly what the discovery call is for, so we can tailor something that fits.",
+        "Great question — there's no one-size-fits-all number since every plan is built around your goals. We'd scope it out together on the discovery call.",
+        "It varies by what you need — we build custom plans rather than fixed packages, so the honest answer is 'let's figure out what fits you' on that first call."
+      ]) },
 
     // Click2Dash / InsightsAI / the app
     { test: /click ?2 ?dash|insights ?ai|\bapp\b|download|dashboard|command center|apple|google play|app store|mobile app/i,
@@ -668,7 +673,11 @@ const cfg = {
 
     // Services (broad) — catch adverbs like "what exactly does PW Media do"
     { test: /\bservices?\b|what (?:exactly |actually )?(?:do|does|can) (?:you|pw ?media|they|it)\b|what.{0,20}(?:you|pw ?media|they) (?:do|does|offer|provide|handle)|what.{0,14}pw ?media\b|everything you (?:do|offer)|full.funnel|what can you (?:do|help)/i,
-      reply: () => "We're a full-funnel marketing and AI lab — web design, paid media and CTV, content, SEO, local visibility, plus automation tools like Click2Dash. Basically your whole marketing under one roof." },
+      reply: () => pick([
+        "We're a full-funnel marketing and AI lab — web design, paid media and CTV, content, SEO, local visibility, plus automation tools like Click2Dash. Basically your whole marketing under one roof.",
+        "Think of us as your whole marketing team in one place — websites, paid media and Connected TV, SEO, content, and AI tools like Click2Dash, all working together.",
+        "We handle the full funnel: getting you found, getting you clicks, and turning those into customers — websites, ads, SEO, content, and our own AI platform behind it all."
+      ]) },
 
     // About / who is PW Media  ("tell me about" / "tell more about")
     { test: /tell (?:me )?(?:more )?about|who (?:are|is) (?:you|pw ?media|the company)|what (?:is|are) pw ?media|your (?:company|story|background|mission)/i,
@@ -723,7 +732,21 @@ function bridgeAsk(ask){
   return b ? b + lc1(ask) : ask;
 }
 
-function freshState(){ return { started: false, done: false }; }
+// Gentle, occasional invitations toward the discovery call — used INSTEAD of
+// re-asking for the callback number on every single turn (which reads like a
+// pushy form). We only surface one of these every few questions.
+const NUDGES = [
+  "Whenever you're ready, I can grab a quick callback number and get that discovery call on the calendar — no rush at all.",
+  "Happy to keep answering — and any time you'd like, I can line up the discovery call for you.",
+  "No pressure — when it feels right, I'll just need a good number to get you scheduled."
+];
+function softNudge(slot){
+  if(!slot) return '';
+  if(slot.key === 'phone') return pick(NUDGES);
+  return 'By the way — ' + lc1(slot.ask);
+}
+
+function freshState(){ return { started: false, done: false, qStreak: 0 }; }
 let state = freshState();
 
 function getScriptedReply(rawText){
@@ -774,14 +797,28 @@ function getScriptedReply(rawText){
 
   if(faq){
     const ans = faq.reply(state);
-    const ack = newlyFilled.length > 0 ? `${pickAck()} ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ` : '';
-    // Some FAQs (e.g. "stop asking me for my number") shouldn't be followed by
-    // re-asking the very slot the caller just pushed back on.
-    return (missingAfter && !faq.noReask) ? ack + ans + ' ' + bridgeAsk(missingAfter.ask) : ack + ans;
+    const labels = newlyFilled.map(s => s.label(state[s.key])).join(', ');
+    // Backoff FAQ, or nothing left to collect → just answer.
+    if(faq.noReask || !missingAfter){
+      state.qStreak = 0;
+      return (newlyFilled.length > 0 ? `${pickAck()} ${labels}. ` : '') + ans;
+    }
+    // They answered something AND asked a question → natural to acknowledge,
+    // answer, and move to the next intake step.
+    if(newlyFilled.length > 0){
+      state.qStreak = 0;
+      return `${pickAck()} ${labels}. ` + ans + ' ' + bridgeAsk(missingAfter.ask);
+    }
+    // Pure question, no new info. This is the big one: DON'T re-ask for their
+    // number every turn — just answer, and only every few questions drop a
+    // soft, no-pressure invite so it feels like a real conversation.
+    state.qStreak = (state.qStreak || 0) + 1;
+    return (state.qStreak % 3 === 1) ? ans + ' ' + softNudge(missingAfter) : ans;
   }
 
   if(missingAfter){
     if(newlyFilled.length > 0){
+      state.qStreak = 0;
       return `${pickAck()} ${newlyFilled.map(s => s.label(state[s.key])).join(', ')}. ${missingAfter.ask}`;
     }
     // A bare "yes"/"sure"/"ok" isn't unclear — it's just agreement with
@@ -789,10 +826,12 @@ function getScriptedReply(rawText){
     if(AFFIRMATIONS.test(rawText.trim())){
       return missingAfter.ask;
     }
-    // A clear question we don't have a canned answer for shouldn't get
-    // "Sorry, I didn't catch that" — acknowledge it warmly and keep moving.
+    // A clear question we don't have a canned answer for: answer warmly, and
+    // only occasionally nudge toward the call (same anti-nagging rule).
     if(looksLikeQuestion(rawText)){
-      return `That's a great question — I can get one of our specialists to walk you through it on your discovery call. First though, ${lc1(missingAfter.ask)}`;
+      state.qStreak = (state.qStreak || 0) + 1;
+      const base = "That's a great question — I can have one of our specialists walk you through the details on your discovery call.";
+      return (state.qStreak % 3 === 1) ? base + ' ' + softNudge(missingAfter) : base;
     }
     return `Sorry, I want to make sure I get this right — ${lc1(missingAfter.ask)}`;
   }
